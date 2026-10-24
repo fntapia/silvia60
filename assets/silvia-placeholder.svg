@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <radialGradient id="fondo" cx=".5" cy=".4" r=".7">
+      <stop offset="0" stop-color="#fffdf6"/>
+      <stop offset="1" stop-color="#f1e3bd"/>
+    </radialGradient>
+    <linearGradient id="oro" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9c741c"/>
+      <stop offset=".45" stop-color="#e2c16b"/>
+      <stop offset=".6" stop-color="#f6e2a6"/>
+      <stop offset="1" stop-color="#b48a2c"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#fondo)"/>
+  <circle cx="300" cy="300" r="240" fill="none" stroke="url(#oro)" stroke-width="3"/>
+  <circle cx="300" cy="300" r="226" fill="none" stroke="url(#oro)" stroke-width="1" stroke-dasharray="2 8"/>
+  <text x="300" y="370" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="220" fill="url(#oro)">S</text>
+  <text x="300" y="440" text-anchor="middle" font-family="Georgia, serif" font-size="22" letter-spacing="8" fill="#94701f">FOTO PRÓXIMAMENTE</text>
+</svg>

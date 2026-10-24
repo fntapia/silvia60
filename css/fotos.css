@@ -1,0 +1,44 @@
+/* /fotos y /trivia (celular) */
+body { min-height: 100vh; background: radial-gradient(ellipse 90% 45% at 50% 0%, rgba(255, 226, 140, .4), rgba(255, 255, 255, 0) 70%), #fff; }
+.ornamento.fijo { position: fixed; }
+.pagina { position: relative; z-index: 2; max-width: 520px; margin: 0 auto; padding: 52px 16px 60px; }
+.cabecera { text-align: center; margin-bottom: 1.2rem; }
+.logo { margin: 0; line-height: 1; }
+.logo .script { font-size: 3.4rem; }
+.logo-60 { font-family: var(--fuente-serif); font-weight: 700; font-size: 2.6rem; color: var(--oro-texto); vertical-align: .15em; margin-left: .1em; }
+.cabecera .titulo { font-size: 1.9rem; margin-top: .3rem; }
+.grande-emoji { font-size: 3rem; margin: 0; }
+.texto-grande { font-size: 1.3rem; font-weight: 500; }
+.suave { color: var(--tinta-suave); }
+
+.aviso-prueba { margin: 0 0 1rem; padding: .6rem 1rem; border-radius: 14px; background: #1A1A1A; color: #FFF3C4; font-weight: 700; font-size: .92rem; text-align: center; }
+.firma-actual { text-align: center; font-size: 1.05rem; margin: 0 0 1rem; }
+.link-boton { background: none; border: 0; color: var(--oro-texto); font-weight: 600; text-decoration: underline; cursor: pointer; padding: .4rem; min-height: 44px; }
+
+.botones-foto { display: grid; gap: 14px; }
+.btn-grande { min-height: 76px; font-size: 1.35rem; border-radius: 22px; }
+.btn-grande span { font-size: 1.6rem; }
+.btn-grande:focus-within { outline: 3px solid var(--oro-claro); outline-offset: 3px; }
+.ayuda { text-align: center; margin: .8rem 0 1.4rem; }
+
+.cola { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: 12px; }
+.item { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; background: #fff; border: 1px solid var(--linea); border-radius: 16px; padding: 10px; box-shadow: var(--sombra); animation: toast-in .3s ease; }
+.item-foto { width: 96px; height: 96px; border-radius: 12px; overflow: hidden; background: var(--crema); }
+.item-foto img { width: 100%; height: 100%; object-fit: cover; }
+.item-cuerpo { min-width: 0; }
+.item-leyenda { min-height: 46px !important; font-size: 1rem !important; margin-bottom: 8px; }
+.item-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.item-botones .btn { flex: 1; font-size: .98rem; padding: .4rem .7rem; white-space: nowrap; }
+.item-texto { margin: .2rem 0 .5rem; font-weight: 600; }
+.item.ok .item-texto { color: var(--ok); }
+.item.bloqueada .item-texto, .item.error .item-texto { color: var(--error); }
+.barra { height: 10px; border-radius: 10px; background: var(--crema-2); overflow: hidden; }
+.barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #a77d22, #e2c16b); transition: width .3s ease; }
+.item.ok .barra, .item.bloqueada .barra { display: none; }
+.item-reintentar { margin-top: 8px; }
+
+.extras { display: grid; gap: 12px; margin-top: 2rem; }
+
+.modal { position: fixed; inset: 0; z-index: 9000; background: rgba(255, 255, 255, .9); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-caja { width: 100%; max-width: 400px; text-align: center; }
+.error-form { color: var(--error); font-weight: 600; min-height: 1.2em; margin: 0 0 .6rem; }

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pantalla · Silvia 60</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/trivia.css">
+  <link rel="stylesheet" href="../css/pantalla.css">
+</head>
+<body class="pantalla">
+  <canvas class="brillos" id="brillos" aria-hidden="true"></canvas>
+
+  <header class="logo-pantalla"><span class="script oro-brillante">Silvia</span><span class="logo-60 oro-brillante">60</span></header>
+
+  <!-- ============ FOTOS ============ -->
+  <main id="vistaFotos" class="vista">
+    <section id="vacio" class="vacio">
+      <p class="vacio-titulo script oro-brillante">¡Bienvenidos!</p>
+      <p class="vacio-texto serif">Sé el primero en subir una foto 📸<br>Escaneá el código y aparece acá al instante.</p>
+    </section>
+    <section id="muro" class="muro oculto">
+      <div class="destacada" id="destacada">
+        <figure class="polaroid grande capa" id="capaA"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
+        <figure class="polaroid grande capa" id="capaB"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
+      </div>
+      <div class="mosaico" id="mosaico"></div>
+    </section>
+  </main>
+
+  <!-- Foto nueva protagonista -->
+  <div class="protagonista oculto" id="protagonista" aria-live="polite">
+    <p class="prota-etiqueta serif">✨ ¡Foto nueva! ✨</p>
+    <figure class="polaroid prota"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
+  </div>
+
+  <!-- Muro en pausa -->
+  <div class="pausa oculto" id="pausa">
+    <p class="script oro-brillante pausa-titulo">Silvia 60</p>
+    <p class="serif pausa-texto">Volvemos en un ratito ✨</p>
+  </div>
+
+  <!-- Mensaje para Silvia (de las confirmaciones) -->
+  <div class="mensaje oculto" id="mensaje">
+    <p class="mensaje-eyebrow">💛 Un mensaje para Silvia</p>
+    <p class="mensaje-texto serif" id="mensajeTexto"></p>
+    <p class="mensaje-autor" id="mensajeAutor"></p>
+  </div>
+
+  <!-- Mensaje manual desde el panel -->
+  <div class="manual oculto" id="manual">
+    <div class="manual-caja"><p class="manual-texto serif" id="manualTexto"></p></div>
+  </div>
+
+  <!-- ============ TRIVIA ============ -->
+  <main id="vistaTrivia" class="vista trivia-pantalla oculto">
+    <section id="tLobby" class="t-lobby oculto">
+      <p class="eyebrow">Trivia</p>
+      <h1 class="t-titulo serif">¿Cuánto conocés a <span class="script oro-brillante">Silvia</span>?</h1>
+      <div class="t-lobby-qr">
+        <div class="qr-grande" id="qrTrivia"></div>
+        <div>
+          <p class="serif t-lobby-paso">1. Escaneá el código con el celular</p>
+          <p class="serif t-lobby-paso">2. Elegí tu apodo</p>
+          <p class="serif t-lobby-paso">3. ¡Respondé rápido para sumar más puntos!</p>
+          <p class="t-link" id="linkTrivia"></p>
+        </div>
+      </div>
+      <p class="t-jugadores"><b id="tCantJug">0</b> jugadores listos</p>
+    </section>
+
+    <section id="tPregunta" class="t-pregunta oculto">
+      <div class="t-cabecera">
+        <p class="t-num" id="tNum">Pregunta 1 de 5</p>
+        <div class="reloj" id="reloj"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="reloj-fondo"/><circle cx="50" cy="50" r="44" class="reloj-arco" id="relojArco"/></svg><b id="relojNum">20</b></div>
+        <p class="t-respuestas"><b id="tResp">0</b> respuestas</p>
+      </div>
+      <h1 class="t-texto serif" id="tTexto"></h1>
+      <img class="t-imagen oculto" id="tImagen" alt="">
+      <div class="t-opciones" id="tOpciones"></div>
+    </section>
+
+    <section id="tResultado" class="t-resultado oculto">
+      <p class="t-num" id="trNum"></p>
+      <h1 class="t-texto chico serif" id="trTexto"></h1>
+      <div class="t-res-grid">
+        <div class="barras" id="barras"></div>
+        <div class="top5">
+          <p class="eyebrow">Top 5</p>
+          <ol id="top5"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="tRanking" class="t-ranking oculto">
+      <h1 class="t-titulo serif">Ranking</h1>
+      <ol class="ranking-lista" id="rankingLista"></ol>
+    </section>
+
+    <section id="tPodio" class="t-podio oculto">
+      <h1 class="t-titulo serif">¡Felicitaciones!</h1>
+      <div class="podio" id="podio"></div>
+    </section>
+  </main>
+
+  <!-- QR permanente -->
+  <aside class="esquina-qr" id="esquinaQr">
+    <div class="qr" id="qrFotos"></div>
+    <div>
+      <p class="esquina-titulo serif">¡Subí tus fotos! 📸</p>
+      <p class="esquina-link" id="linkFotos"></p>
+    </div>
+  </aside>
+
+  <div class="conexion oculto" id="conexion">Reconectando…</div>
+
+  <button class="iniciar" id="iniciar" type="button">
+    <span class="script oro-brillante">Silvia 60</span>
+    <span class="serif">Tocá para empezar en pantalla completa</span>
+  </button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="../config.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/datos.js"></script>
+  <script src="../js/pantalla.js"></script>
+</body>
+</html>

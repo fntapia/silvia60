@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>¡Estás invitado/a a los 60 de Silvia!</title>
+  <meta name="description" content="Sábado 5 de diciembre · 22:30 h · Salón de Fer, Chimbas, San Juan. ¡Confirmá tu asistencia!">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex, nofollow">  <!-- que no aparezca en buscadores -->
+  <!-- Vista previa de WhatsApp (Open Graph). La guía explica cómo poner la dirección real del sitio -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:title" content="¡Estás invitado/a a los 60 de Silvia!">
+  <meta property="og:description" content="Sábado 5 de diciembre · 22:30 h · Salón de Fer, Chimbas, San Juan">
+  <meta property="og:image" content="https://fntapia.github.io/silvia60/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Silvia · 60 — invitación blanca y dorada">
+  <meta property="og:url" content="https://fntapia.github.io/silvia60/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/silvia-portada.webp">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/invitacion.css">
+</head>
+<body>
+  <canvas class="brillos" id="brillos" aria-hidden="true"></canvas>
+
+  <!-- APERTURA: sobre con sello dorado -->
+  <div class="apertura" id="apertura">
+    <p class="apertura-para" id="aperturaPara">Una invitación especial</p>
+    <button class="sobre" id="sobre" type="button" aria-label="Abrir la invitación">
+      <span class="sobre-carta" aria-hidden="true"><span class="script oro-brillante">Silvia</span><b class="oro-brillante">60</b></span>
+      <span class="sobre-fondo" aria-hidden="true"></span>
+      <span class="sobre-bolsillo" aria-hidden="true"></span>
+      <span class="sobre-solapa" aria-hidden="true"><i></i></span>
+      <span class="sobre-sello" aria-hidden="true">60</span>
+    </button>
+    <p class="apertura-texto">Tocá para abrir <span aria-hidden="true">✨</span></p>
+  </div>
+
+  <div class="progreso" id="progreso" aria-hidden="true"></div>
+
+  <button class="btn-musica oculto" id="btnMusica" aria-label="Activar música" aria-pressed="false">♪</button>
+
+  <main class="historia" id="historia">
+
+    <!-- 1 · PORTADA -->
+    <section class="lamina portada" data-nombre="portada">
+      <div class="halo" aria-hidden="true"></div>
+      <figure class="portada-foto">
+        <div class="globo" aria-hidden="true">
+          <span class="globo-num">60</span>
+          <svg class="globo-hilo" viewBox="0 0 40 120" fill="none"><path d="M20 0 C 6 20, 34 34, 20 54 S 6 88, 20 120" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <img data-imagen="portada" alt="Silvia bailando, feliz" width="686" height="593" fetchpriority="high" decoding="async">
+      </figure>
+      <div class="contenido">
+        <h1 class="nombre" id="nombreHomenajeada" aria-label="Silvia">Silvia</h1>
+        <p class="frase" id="fraseInvitado">¡Te invito a celebrar mis 60!</p>
+        <p class="portada-fecha"><span id="portadaFecha">Sábado 5 de diciembre</span><i aria-hidden="true">✦</i><span id="portadaHora">22:30 h</span></p>
+        <div class="deslizar" aria-hidden="true"><i></i><span>Deslizá hacia arriba</span></div>
+      </div>
+    </section>
+
+    <!-- 2 · SALUDO -->
+    <section class="lamina" data-nombre="saludo">
+      <div class="ornamento sup-der"></div><div class="ornamento inf-izq"></div>
+      <div class="contenido">
+        <span class="emoji-salto" aria-hidden="true">🎉</span>
+        <p class="eyebrow">Una invitación para</p>
+        <h2 class="saludo" id="saludoNombres">¡Hola!</h2>
+        <div class="tarjeta tarjeta-cupo">
+          <p class="texto-grande" id="saludoCupo">Nos encantaría que seas parte de esta noche tan especial.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · FECHA Y HORA -->
+    <section class="lamina" data-nombre="fecha">
+      <div class="ornamento sup-izq"></div><div class="ornamento inf-der"></div>
+      <div class="contenido">
+        <span class="emoji-salto icono-cal" aria-hidden="true"><span class="cal-mes" id="calMes">DIC</span><span class="cal-dia" id="calDia">5</span></span>
+        <p class="eyebrow">Guardá la fecha</p>
+        <h2 class="titulo grande" id="fechaTexto">Sábado 5 de diciembre</h2>
+        <p class="hora"><span id="horaTexto">22:30 h</span></p>
+        <p class="puntual" id="textoPuntual">¡Te esperamos puntual!</p>
+        <div class="cuenta" id="cuenta" aria-label="Cuenta regresiva">
+          <div class="flip"><b id="cDias">--</b><span>días</span></div>
+          <div class="flip"><b id="cHoras">--</b><span>horas</span></div>
+          <div class="flip"><b id="cMin">--</b><span>min</span></div>
+          <div class="flip"><b id="cSeg">--</b><span>seg</span></div>
+        </div>
+        <div class="acciones">
+          <a class="btn btn-oro" id="btnGoogleCal" target="_blank" rel="noopener">Agendar en Google</a>
+          <button class="btn" id="btnIcs" type="button">Agendar en mi celular (.ics)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · LUGAR -->
+    <section class="lamina" data-nombre="lugar">
+      <div class="ornamento sup-der"></div><div class="ornamento inf-izq"></div>
+      <div class="contenido">
+        <span class="emoji-salto" aria-hidden="true">📍</span>
+        <p class="eyebrow">¿Dónde?</p>
+        <div class="tarjeta tarjeta-lugar">
+          <h2 class="titulo grande" id="lugarNombre">Salón de Fer</h2>
+          <p class="texto-grande"><span id="lugarDireccion">Calle Salta 1850 (N)</span><br><span id="lugarLocalidad" class="suave">Chimbas, San Juan</span></p>
+        </div>
+        <div class="acciones">
+          <a class="btn btn-oro" id="btnMaps" target="_blank" rel="noopener">Cómo llegar</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · DRESS CODE -->
+    <section class="lamina" data-nombre="dresscode">
+      <div class="ornamento sup-izq"></div><div class="ornamento inf-der"></div>
+      <div class="contenido">
+        <span class="emoji-salto" aria-hidden="true">👗</span>
+        <p class="eyebrow">Dress code</p>
+        <h2 class="titulo grande" id="dressTitulo">Elegante.</h2>
+        <div class="tarjeta">
+          <p class="texto" id="dressTexto"></p>
+          <div class="muestras" id="muestras"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 + 7 · CONFIRMACIÓN Y CANCIÓN -->
+    <section class="lamina lamina-larga" data-nombre="rsvp" id="rsvp">
+      <div class="contenido ancho">
+        <span class="emoji-salto" aria-hidden="true">💛</span>
+        <p class="eyebrow">Confirmá tu asistencia</p>
+        <h2 class="titulo grande" id="rsvpTitulo">¿Me acompañás?</h2>
+        <p class="suave" id="rsvpLimite">Tenés tiempo hasta el 20 de noviembre.</p>
+
+        <div class="tarjeta rsvp-tarjeta">
+          <div id="rsvpCargando" class="centro suave">Cargando…</div>
+
+          <div id="rsvpResumen" class="oculto">
+            <div class="resumen-icono" aria-hidden="true">💛</div>
+            <p class="resumen-titulo" id="resumenTitulo"></p>
+            <p class="suave" id="resumenDetalle"></p>
+            <button class="btn" id="btnModificar" type="button">Modificar mi respuesta</button>
+          </div>
+
+          <div id="rsvpCerrado" class="oculto centro">
+            <p class="texto-grande">El plazo para confirmar terminó.</p>
+            <p class="suave">Si necesitás avisar algo, comunicate directamente con la familia. ¡Gracias!</p>
+          </div>
+
+          <form id="formRsvp" class="oculto" novalidate>
+            <label class="campo" id="campoNombre">
+              <span>Tu nombre (o el de tu familia)</span>
+              <input type="text" name="nombre_contacto" maxlength="120" autocomplete="name" placeholder="Ej: Marta y Carlos Pérez">
+            </label>
+
+            <fieldset class="campo sin-borde">
+              <legend class="etiqueta" id="legendAsiste">¿Venís?</legend>
+              <div class="opciones">
+                <label class="opcion"><input type="radio" name="asiste" value="si"><span>¡Sí, vamos! 🎉</span></label>
+                <label class="opcion"><input type="radio" name="asiste" value="no"><span>No podremos</span></label>
+                <label class="opcion"><input type="radio" name="asiste" value="nose"><span>Todavía no sé</span></label>
+              </div>
+            </fieldset>
+
+            <div id="bloqueSi" class="oculto">
+              <div class="campo">
+                <span class="etiqueta">¿Cuántos van a venir?</span>
+                <div class="contador">
+                  <button type="button" class="btn btn-chico" id="menos" aria-label="Uno menos">−</button>
+                  <output id="cantidadVer" aria-live="polite">1</output>
+                  <button type="button" class="btn btn-chico" id="mas" aria-label="Uno más">+</button>
+                  <small id="cupoInfo"></small>
+                </div>
+                <input type="hidden" name="cantidad" value="1">
+              </div>
+
+              <label class="campo">
+                <span>Nombres de quienes vienen</span>
+                <textarea name="nombres_asistentes" maxlength="400" rows="2" placeholder="Ej: Marta, Carlos y Sofi"></textarea>
+              </label>
+
+              <fieldset class="campo sin-borde">
+                <legend class="etiqueta">¿Alguien necesita un menú especial?</legend>
+                <div class="opciones">
+                  <label class="opcion"><input type="radio" name="menu" value="ninguno" checked><span>No</span></label>
+                  <label class="opcion"><input type="radio" name="menu" value="vegetariano"><span>Vegetariano</span></label>
+                  <label class="opcion"><input type="radio" name="menu" value="celiaco"><span>Celíaco</span></label>
+                  <label class="opcion"><input type="radio" name="menu" value="otro"><span>Otro</span></label>
+                </div>
+              </fieldset>
+              <label class="campo oculto" id="campoMenuDetalle">
+                <span>Contanos el detalle</span>
+                <input type="text" name="menu_detalle" maxlength="200" placeholder="Ej: 1 celíaco (Sofi)">
+              </label>
+
+              <div class="cancion-bloque">
+                <span class="emoji-salto chico" aria-hidden="true">🎶</span>
+                <p class="eyebrow">Tu canción</p>
+                <p class="cancion-pregunta">¿Qué canción no puede faltar en la pista?</p>
+                <div class="cancion" data-i="0">
+                  <input type="text" name="tema0" maxlength="100" placeholder="Tema" aria-label="Tema de la canción 1">
+                  <input type="text" name="artista0" maxlength="100" placeholder="Artista" aria-label="Artista de la canción 1">
+                </div>
+                <div class="cancion oculto" data-i="1" id="cancion2">
+                  <input type="text" name="tema1" maxlength="100" placeholder="Otro tema" aria-label="Tema de la canción 2">
+                  <input type="text" name="artista1" maxlength="100" placeholder="Artista" aria-label="Artista de la canción 2">
+                </div>
+                <button type="button" class="link-boton" id="btnOtraCancion">+ Sumar otra canción</button>
+              </div>
+            </div>
+
+            <label class="campo">
+              <span>Un mensaje para Silvia <small>(opcional)</small></span>
+              <textarea name="mensaje" maxlength="600" rows="3" placeholder="Unas palabras con cariño…"></textarea>
+            </label>
+            <label class="check">
+              <input type="checkbox" name="mostrar_mensaje" checked>
+              <span>Se puede mostrar en la pantalla de la fiesta</span>
+            </label>
+
+            <p class="error-form" id="errorRsvp" role="alert"></p>
+            <button class="btn btn-oro btn-bloque" type="submit" id="btnEnviar">Confirmar</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · FOTOS DE LA FIESTA -->
+    <section class="lamina" data-nombre="fotos">
+      <div class="ornamento sup-der"></div><div class="ornamento inf-izq"></div>
+      <div class="contenido">
+        <span class="emoji-salto" aria-hidden="true">📸</span>
+        <p class="eyebrow">Fotos de la fiesta</p>
+        <div class="polaroids" aria-hidden="true"><span>🥂</span><span>💃</span><span>🎂</span></div>
+        <div class="tarjeta">
+          <p class="texto-grande" id="fotosTexto">El día de la fiesta, desde acá vas a poder sacar fotos que aparecerán en la pantalla del salón</p>
+        </div>
+        <div class="acciones">
+          <a class="btn btn-oro oculto" id="btnSubirFotos" href="fotos/">Subir fotos</a>
+          <a class="btn" id="btnCompartirFotos" target="_blank" rel="noopener">Compartir este acceso</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 · CIERRE (sin foto): globo 60, mensaje y firma -->
+    <section class="lamina cierre" data-nombre="cierre">
+      <div class="ornamento sup-izq"></div><div class="ornamento sup-der"></div><div class="ornamento inf-izq"></div><div class="ornamento inf-der"></div>
+      <div class="contenido">
+        <div class="cierre-globo" aria-hidden="true">
+          <div class="cierre-halo"></div>
+          <span class="globo-num">60</span>
+          <svg class="globo-hilo" viewBox="0 0 40 120" fill="none"><path d="M20 0 C 6 20, 34 34, 20 54 S 6 88, 20 120" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p class="eyebrow">Con todo mi cariño</p>
+        <div class="tarjeta cierre-tarjeta">
+          <p class="cierre-texto" id="cierreTexto">Gracias por ser parte de mi vida. ¡Los espero!</p>
+          <p class="firma" id="cierreFirma">Silvia</p>
+        </div>
+        <button class="btn btn-chico" id="btnVolver" type="button">↑ Volver al inicio</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="celebracion oculto" id="celebracion" role="dialog" aria-modal="true" aria-labelledby="celebracionTexto">
+    <div class="celebracion-caja">
+      <div class="celebracion-icono" id="celebracionIcono" aria-hidden="true">🥳</div>
+      <p class="celebracion-texto" id="celebracionTexto">¡Gracias! Silvia ya sabe que venís 💛</p>
+      <button class="btn btn-oro" id="btnCerrarCelebracion" type="button">Seguir</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="config.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/datos.js"></script>
+  <script src="js/invitacion.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imagen para WhatsApp · Silvia 60</title>
+  <meta name="robots" content="noindex">
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,900&family=Montserrat:wght@600;700;800&family=Playfair+Display:ital,wght@0,900;1,800&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; padding: 20px; font-family: Montserrat, system-ui, sans-serif; background: #f4f4f4; color: #1A1A1A; text-align: center; }
+    canvas { width: 100%; max-width: 900px; height: auto; box-shadow: 0 10px 30px rgba(0,0,0,.15); background: #fff; }
+    button { font: 700 17px Montserrat, sans-serif; padding: 14px 26px; margin: 16px 8px; border-radius: 999px; border: 0; background: linear-gradient(120deg,#B8860B,#F5D97A,#D4AF37,#FFF3C4,#D4AF37); color: #1A1A1A; cursor: pointer; }
+    p { max-width: 640px; margin: 8px auto; }
+  </style>
+</head>
+<body>
+  <h1>Imagen de vista previa para WhatsApp</h1>
+  <p>Esta imagen aparece cuando mandás el link por WhatsApp. Usa la foto de portada sin fondo (<b>assets/silvia-portada.webp</b>, se cambia en config.js). Tocá «Descargar» y subí <b>og.jpg</b> a la carpeta <b>assets</b> del sitio, reemplazando el anterior.</p>
+  <canvas id="c" width="1200" height="630"></canvas><br>
+  <button id="bajar" type="button">Descargar og.jpg</button>
+  <script src="../config.js"></script>
+  <script>
+  (async function () {
+    const C = window.CONFIG;
+    const c = document.getElementById('c'), x = c.getContext('2d');
+    await Promise.all([document.fonts.load('italic 800 120px "Playfair Display"'), document.fonts.load('900 120px "Bodoni Moda"'), document.fonts.load('700 30px Montserrat')]);
+    const cargar = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
+    const foto = await cargar('../' + C.imagenes.portada.src + '?v=' + Date.now());
+    const esquina = await cargar('../assets/ornamento.svg');
+    const foil = (x0, y0, x1, y1) => { const g = x.createLinearGradient(x0, y0, x1, y1); [[0, '#B8860B'], [.26, '#F5D97A'], [.48, '#D4AF37'], [.64, '#FFF3C4'], [.8, '#D4AF37'], [1, '#B8860B']].forEach(s => g.addColorStop(...s)); return g; };
+    const estrella = (bx, by, s, color) => {
+      x.save(); x.translate(bx, by); x.fillStyle = color || foil(-s, -s, s, s);
+      x.beginPath(); x.moveTo(0, -s); x.quadraticCurveTo(0, 0, s, 0); x.quadraticCurveTo(0, 0, 0, s); x.quadraticCurveTo(0, 0, -s, 0); x.quadraticCurveTo(0, 0, 0, -s); x.fill(); x.restore();
+    };
+
+    // Fondo blanco puro con brillo dorado detrás del retrato
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 1200, 630);
+    const halo = x.createRadialGradient(400, 280, 20, 400, 280, 380);
+    halo.addColorStop(0, 'rgba(255,214,90,.75)'); halo.addColorStop(.45, 'rgba(255,230,150,.4)'); halo.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = halo; x.fillRect(0, 0, 1200, 630);
+
+    // Confeti y lentejuelas
+    const azar = (a, b) => a + Math.random() * (b - a);
+    for (let i = 0; i < 46; i++) {
+      const px = azar(20, 1180), py = azar(20, 610);
+      if (px > 170 && px < 640 && py > 30) continue;          // no sobre Silvia
+      x.save(); x.translate(px, py); x.rotate(azar(0, 6.28));
+      const t = i % 4;
+      if (t === 0) { x.fillStyle = foil(-6, -3, 6, 3); x.fillRect(-7, -2.5, 14, 5); }
+      else if (t === 1) { const g = x.createRadialGradient(-2, -2, 0, 0, 0, 7); g.addColorStop(0, '#FFF8DC'); g.addColorStop(.5, '#E9C653'); g.addColorStop(1, '#A97A08'); x.fillStyle = g; x.beginPath(); x.arc(0, 0, azar(3, 7), 0, 7); x.fill(); }
+      else if (t === 2) { x.fillStyle = '#fff'; x.strokeStyle = '#D4AF37'; x.lineWidth = 1.5; x.fillRect(-5, -2, 10, 4); x.strokeRect(-5, -2, 10, 4); }
+      else estrella(0, 0, azar(6, 12));
+      x.restore();
+    }
+    if (esquina) {
+      x.drawImage(esquina, -6, -6, 170, 170);
+      x.save(); x.translate(1206, 636); x.rotate(Math.PI); x.drawImage(esquina, 0, 0, 150, 150); x.restore();
+    }
+
+    // Silvia bailando (sin fondo), con la cara grande y cerca del centro: WhatsApp en chico recorta un cuadrado central (x 285 a 915)
+    if (foto) {
+      const CARA = [400, 230];                                         // dónde queremos la cara en la imagen final
+      const esc = 1.75, w = foto.width * esc, h = foto.height * esc;   // ≈ 1200 × 1040: la cara queda de unos 200 px
+      const fx = CARA[0] - w * C.imagenes.portada.foco[0] / 100, fy = CARA[1] - h * C.imagenes.portada.foco[1] / 100;
+      const capa = document.createElement('canvas'); capa.width = 1200; capa.height = 630;
+      const k = capa.getContext('2d');
+      k.drawImage(foto, fx, fy, w, h);
+      // fundido ovalado: deja la cara, los brazos y parte del cuerpo; se desvanece antes de los textos
+      const m = k.createRadialGradient(CARA[0], CARA[1] + 60, 160, CARA[0], CARA[1] + 90, 360);
+      m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(.7, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+      k.globalCompositeOperation = 'destination-in'; k.fillStyle = m; k.fillRect(0, 0, 1200, 630);
+      x.save(); x.shadowColor = 'rgba(120,80,0,.28)'; x.shadowBlur = 26; x.shadowOffsetY = 12; x.drawImage(capa, 0, 0); x.restore();
+    }
+
+    // Textos: "Silvia · 60" y la fecha
+    x.textAlign = 'center';
+    const cx = 905;
+    x.save(); x.shadowColor = 'rgba(184,134,11,.3)'; x.shadowBlur = 14; x.shadowOffsetY = 5;
+    x.fillStyle = foil(cx - 220, 90, cx + 220, 230);
+    x.font = 'italic 800 132px "Playfair Display"'; x.fillText(C.homenajeada, cx, 205);
+    x.restore();
+    // El 60 tipo globo foil con volumen (Bodoni Moda: números rectos; en canvas Playfair sale con números antiguos)
+    x.save();
+    x.font = '900 180px "Bodoni Moda"';
+    x.fillStyle = '#a87b06'; x.fillText(String(C.edad), cx + 2, 392);
+    x.shadowColor = 'rgba(184,134,11,.45)'; x.shadowBlur = 24; x.shadowOffsetY = 10;
+    const g60 = x.createLinearGradient(0, 240, 0, 390); [[0, '#FFF3C4'], [.25, '#F5D97A'], [.55, '#D4AF37'], [.75, '#B8860B'], [1, '#F5D97A']].forEach(s => g60.addColorStop(...s));
+    x.fillStyle = g60; x.fillText(String(C.edad), cx, 386);
+    x.restore();
+    estrella(cx - 130, 268, 13); estrella(cx + 138, 300, 9);
+    // Fecha en una píldora negra con letras doradas
+    const fecha = `${C.fechaTexto}  ✦  ${C.horaTexto}`;
+    x.font = '700 26px Montserrat';
+    const fw = x.measureText(fecha).width + 60, fx0 = cx - fw / 2;
+    x.save(); x.shadowColor = 'rgba(0,0,0,.25)'; x.shadowBlur = 18; x.shadowOffsetY = 8;
+    x.fillStyle = '#1A1A1A'; x.beginPath(); x.roundRect(fx0, 432, fw, 64, 32); x.fill(); x.restore();
+    x.strokeStyle = 'rgba(245,217,122,.6)'; x.lineWidth = 1.5; x.beginPath(); x.roundRect(fx0 + .75, 432.75, fw - 1.5, 62.5, 31); x.stroke();
+    x.fillStyle = '#FFF3C4'; x.fillText(fecha, cx, 473);
+    x.fillStyle = '#555'; x.font = '600 24px Montserrat';
+    x.fillText(`${C.lugar.nombre} · ${C.lugar.localidad.split(',')[0]}`, cx, 545);
+
+    document.getElementById('bajar').onclick = () => c.toBlob(b => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'og.jpg'; a.click();
+    }, 'image/jpeg', .9);
+    window.ogListo = true;
+  })();
+  </script>
+</body>
+</html>

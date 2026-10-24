@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fotos · Silvia 60</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex, nofollow">  <!-- que no aparezca en buscadores -->
+  <meta property="og:title" content="📸 Subí tus fotos a la pantalla de los 60 de Silvia">
+  <meta property="og:description" content="Sacá fotos y aparecen en vivo en la pantalla del salón">
+  <meta property="og:image" content="https://fntapia.github.io/silvia60/assets/og.jpg">
+  <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/fotos.css">
+</head>
+<body>
+  <canvas class="brillos" id="brillos" aria-hidden="true"></canvas>
+  <div class="ornamento sup-izq fijo"></div>
+
+  <main class="pagina">
+    <header class="cabecera">
+      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span></p>
+      <h1 class="titulo">Fotos de la fiesta</h1>
+    </header>
+
+    <!-- Antes de la hora -->
+    <section id="cerrado" class="tarjeta centro oculto">
+      <p class="grande-emoji" aria-hidden="true">📸</p>
+      <p class="serif texto-grande">El día de la fiesta, desde acá vas a poder sacar fotos que aparecerán en la pantalla del salón.</p>
+      <p class="suave" id="cerradoCuando"></p>
+      <a class="btn" href="../">Ver la invitación</a>
+    </section>
+
+    <!-- Abierto -->
+    <p class="aviso-prueba oculto" id="avisoPrueba">🧪 Modo prueba activo: las fotos que subas son de prueba</p>
+    <section id="abierto" class="oculto">
+      <p class="firma-actual">Tus fotos van firmadas: <b id="firmaTexto">📸 por …</b> <button class="link-boton" id="btnCambiarNombre" type="button">cambiar</button></p>
+
+      <div class="botones-foto">
+        <label class="btn btn-oro btn-grande">
+          <input type="file" accept="image/*" capture="environment" id="inputCamara" class="sr-only">
+          <span aria-hidden="true">📷</span> Sacar una foto
+        </label>
+        <label class="btn btn-grande">
+          <input type="file" accept="image/*" multiple id="inputGaleria" class="sr-only">
+          <span aria-hidden="true">🖼️</span> Elegir de la galería
+        </label>
+      </div>
+      <p class="ayuda suave">Tus fotos aparecen en la pantalla del salón en segundos ✨</p>
+
+      <div id="publicarTodas" class="oculto centro">
+        <button class="btn btn-oro" id="btnPublicarTodas" type="button">Publicar todas</button>
+      </div>
+      <ul class="cola" id="cola" aria-live="polite"></ul>
+
+      <div class="extras">
+        <a class="btn" href="../trivia/">🎯 Jugar a la trivia</a>
+        <a class="btn" id="btnCompartir" target="_blank" rel="noopener">Compartir este acceso por WhatsApp</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Pedir nombre una sola vez -->
+  <div class="modal oculto" id="modalNombre" role="dialog" aria-modal="true" aria-labelledby="modalNombreTitulo">
+    <form class="modal-caja tarjeta" id="formNombre">
+      <h2 class="titulo" id="modalNombreTitulo">¿Cómo te llamás?</h2>
+      <p class="suave">Así firmamos tus fotos en la pantalla. Por ejemplo: <i>📸 por Tía Marta</i></p>
+      <label class="campo"><span class="sr-only">Tu nombre</span>
+        <input type="text" id="inputNombre" maxlength="30" autocomplete="nickname" placeholder="Ej: Tía Marta" required>
+      </label>
+      <p class="error-form" id="errorNombre" role="alert"></p>
+      <button class="btn btn-oro btn-bloque" type="submit">Listo</button>
+    </form>
+  </div>
+
+  <template id="tplItem">
+    <li class="item">
+      <div class="item-foto"><img alt=""></div>
+      <div class="item-cuerpo">
+        <div class="item-editar">
+          <input type="text" class="item-leyenda" maxlength="80" placeholder="Leyenda (opcional)" aria-label="Leyenda de la foto">
+          <div class="item-botones">
+            <button class="btn btn-oro btn-chico item-publicar" type="button">Publicar ✨</button>
+            <button class="btn btn-chico item-descartar" type="button">Descartar</button>
+          </div>
+        </div>
+        <div class="item-estado oculto">
+          <p class="item-texto">Preparando…</p>
+          <div class="barra"><i></i></div>
+          <button class="btn btn-chico item-reintentar oculto" type="button">Reintentar</button>
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <script src="../config.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/datos.js"></script>
+  <script src="../js/filtro.js"></script>
+  <script src="../js/fotos.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+/* Opciones de trivia: 4 colores vivos y elegantes + forma (para daltónicos), iguales en pantalla y celular */
+.op { --c: #C9971C; }
+.op0 { --c: #C9971C; }   /* dorado */
+.op1 { --c: #1A1A1A; }   /* negro */
+.op2 { --c: #0E8A6A; }   /* esmeralda */
+.op3 { --c: #2456B8; }   /* azul */
+.forma { display: inline-flex; align-items: center; justify-content: center; flex: none; color: #fff; }
+.forma::before { content: '◆'; }
+.op1 .forma::before { content: '▲'; }
+.op2 .forma::before { content: '●'; }
+.op3 .forma::before { content: '■'; }

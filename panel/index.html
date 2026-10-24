@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel · Silvia 60</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/trivia.css">
+  <link rel="stylesheet" href="../css/panel.css">
+</head>
+<body>
+  <!-- LOGIN -->
+  <section class="login" id="login">
+    <form class="tarjeta login-caja" id="formLogin">
+      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span></p>
+      <h1 class="titulo">Panel de administración</h1>
+      <label class="campo"><span>Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
+      <label class="campo"><span>Contraseña</span><input type="password" id="loginClave" autocomplete="current-password" required></label>
+      <p class="suave chico" id="loginAyuda"></p>
+      <p class="error-form" id="loginError" role="alert"></p>
+      <button class="btn btn-oro btn-bloque" type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <!-- PANEL -->
+  <div class="panel oculto" id="panel">
+    <header class="barra-sup">
+      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span> <span class="suave chico">· Panel</span></p>
+      <div class="barra-acciones">
+        <a class="btn btn-chico" href="../pantalla/" target="_blank" rel="noopener">Abrir pantalla ↗</a>
+        <button class="btn btn-chico" id="btnSalir" type="button">Salir</button>
+      </div>
+    </header>
+
+    <nav class="pestanas" id="pestanas" role="tablist">
+      <button role="tab" data-tab="invitados" aria-selected="true">👥 Invitados</button>
+      <button role="tab" data-tab="confirmaciones">✅ Confirmaciones</button>
+      <button role="tab" data-tab="playlist">🎶 Playlist</button>
+      <button role="tab" data-tab="mensajes">💌 Mensajes</button>
+      <button role="tab" data-tab="fotos">📸 Fotos</button>
+      <button role="tab" data-tab="trivia">🎯 Trivia</button>
+      <button role="tab" data-tab="pantalla">📺 Pantalla</button>
+    </nav>
+
+    <main class="contenido-panel">
+      <!-- INVITADOS -->
+      <section class="tab" id="tab-invitados">
+        <div class="fila-titulo">
+          <h2 class="titulo">Invitados</h2>
+          <p class="suave" id="resumenInvitados"></p>
+        </div>
+        <form class="tarjeta form-grupo" id="formGrupo">
+          <input type="hidden" name="id">
+          <div class="grilla-form">
+            <label class="campo"><span>Nombres a mostrar</span><input type="text" name="nombres" maxlength="120" required placeholder="Ej: Familia Gómez"></label>
+            <label class="campo campo-chico"><span>Cupo</span><input type="number" name="cupo" min="1" max="30" value="2" required></label>
+            <label class="campo"><span>Teléfono <small>(opcional)</small></span><input type="tel" name="telefono" maxlength="30" placeholder="264 512-3456"></label>
+            <label class="campo"><span>Link <small>(se arma solo)</small></span><input type="text" name="slug" maxlength="60" pattern="[a-z0-9-]{3,60}" placeholder="familia-gomez-x7k2"></label>
+          </div>
+          <div class="fila-botones">
+            <button class="btn btn-oro" type="submit" id="btnGuardarGrupo">Agregar grupo</button>
+            <button class="btn oculto" type="button" id="btnCancelarGrupo">Cancelar</button>
+            <label class="btn">⬆ Importar CSV<input type="file" accept=".csv,text/csv" id="inputCsv" class="sr-only"></label>
+            <a class="link-boton" href="../invitados-ejemplo.csv" download>Ver ejemplo de CSV</a>
+          </div>
+        </form>
+        <div class="tabla-wrap"><table class="tabla" id="tablaGrupos"></table></div>
+      </section>
+
+      <!-- CONFIRMACIONES -->
+      <section class="tab oculto" id="tab-confirmaciones">
+        <div class="fila-titulo">
+          <h2 class="titulo">Confirmaciones</h2>
+          <button class="btn btn-chico" id="btnExportarRsvp" type="button">⬇ Exportar Excel/CSV</button>
+        </div>
+        <div class="tarjetas-num" id="numeros"></div>
+        <h3 class="subtitulo">Menús especiales</h3>
+        <div id="menus" class="lista-simple"></div>
+        <h3 class="subtitulo">Todas las respuestas</h3>
+        <div class="tabla-wrap"><table class="tabla" id="tablaRsvp"></table></div>
+      </section>
+
+      <!-- PLAYLIST -->
+      <section class="tab oculto" id="tab-playlist">
+        <div class="fila-titulo">
+          <h2 class="titulo">Playlist</h2>
+          <button class="btn btn-chico" id="btnExportarPlaylist" type="button">⬇ Exportar</button>
+        </div>
+        <div class="tabla-wrap"><table class="tabla" id="tablaPlaylist"></table></div>
+      </section>
+
+      <!-- MENSAJES -->
+      <section class="tab oculto" id="tab-mensajes">
+        <div class="fila-titulo">
+          <h2 class="titulo">Mensajes para Silvia</h2>
+          <button class="btn btn-chico" id="btnExportarMensajes" type="button">⬇ Exportar</button>
+        </div>
+        <div id="listaMensajes" class="mensajes"></div>
+      </section>
+
+      <!-- FOTOS -->
+      <section class="tab oculto" id="tab-fotos">
+        <div class="fila-titulo">
+          <h2 class="titulo">Fotos</h2>
+          <div class="fila-botones">
+            <button class="btn btn-chico" id="btnZipFavoritas" type="button">⬇ Favoritas (ZIP)</button>
+            <button class="btn btn-chico btn-oro" id="btnZipTodas" type="button">⬇ Todas (ZIP)</button>
+          </div>
+        </div>
+        <div class="uso" id="uso"></div>
+        <div class="filtros" id="filtrosFotos">
+          <button data-f="todas" class="activo">Todas</button>
+          <button data-f="publicada">Publicadas</button>
+          <button data-f="oculta">Ocultas</button>
+          <button data-f="revision">En revisión</button>
+          <button data-f="favorita">⭐ Favoritas</button>
+        </div>
+        <p class="suave chico" id="zipProgreso"></p>
+        <div class="galeria" id="galeria"></div>
+      </section>
+
+      <!-- TRIVIA -->
+      <section class="tab oculto" id="tab-trivia">
+        <h2 class="titulo">Trivia</h2>
+        <div class="tarjeta control-trivia">
+          <p class="estado-trivia" id="estadoTrivia">Trivia apagada</p>
+          <div class="fila-botones">
+            <button class="btn btn-oro" data-accion="abrir" type="button">▶ Abrir trivia (mostrar QR)</button>
+            <button class="btn btn-oro" data-accion="siguiente" type="button">⏭ Siguiente pregunta</button>
+            <button class="btn" data-accion="revelar" type="button">👁 Mostrar respuesta ya</button>
+            <button class="btn" data-accion="ranking" type="button">🏅 Mostrar ranking</button>
+            <button class="btn" data-accion="terminar" type="button">🏆 Terminar juego (podio)</button>
+            <button class="btn" data-accion="cerrar" type="button">📸 Volver a las fotos</button>
+          </div>
+          <p class="suave chico">Orden sugerido: Abrir → esperar que se sumen → Siguiente pregunta (la respuesta aparece sola a los 20 segundos) → Siguiente… → Terminar juego.</p>
+        </div>
+        <div class="fila-titulo">
+          <h3 class="subtitulo">Preguntas</h3>
+          <button class="btn btn-chico" id="btnNuevaPregunta" type="button">+ Nueva pregunta</button>
+        </div>
+        <div id="listaPreguntas" class="preguntas"></div>
+      </section>
+
+      <!-- PANTALLA -->
+      <section class="tab oculto" id="tab-pantalla">
+        <h2 class="titulo">Pantalla del salón</h2>
+        <div class="tarjeta">
+          <p class="estado-trivia" id="estadoPantalla"></p>
+          <div class="fila-botones">
+            <button class="btn btn-oro" id="btnPausa" type="button">⏸ Pausar muro</button>
+            <button class="btn" id="btnIrTrivia" type="button">🎯 Activar trivia</button>
+            <a class="btn" href="../pantalla/" target="_blank" rel="noopener">Abrir pantalla ↗</a>
+          </div>
+        </div>
+        <div class="tarjeta">
+          <h3 class="subtitulo">Mensaje en la pantalla</h3>
+          <textarea id="mensajeManual" maxlength="160" rows="3" placeholder="Ej: ¡En 5 minutos soplamos las velitas! 🎂"></textarea>
+          <div class="fila-botones">
+            <button class="btn btn-oro" id="btnMostrarMensaje" type="button">Mostrar en pantalla</button>
+            <button class="btn" id="btnQuitarMensaje" type="button">Quitar mensaje</button>
+          </div>
+        </div>
+        <div class="tarjeta tarjeta-prueba">
+          <h3 class="subtitulo">🧪 Prueba general (antes de mandar las invitaciones)</h3>
+          <p class="estado-trivia" id="estadoPrueba">Modo prueba apagado</p>
+          <p class="suave chico">Con el modo prueba prendido, <b>/fotos</b> se puede usar antes del 5/12 para probar subir fotos, la pantalla y la trivia. Acordate de apagarlo al terminar.</p>
+          <div class="fila-botones">
+            <button class="btn btn-oro" id="btnModoPrueba" type="button">Prender modo prueba</button>
+          </div>
+          <hr class="separador-panel">
+          <p class="suave chico"><b>Borrar datos de prueba</b> deja todo limpio para el envío real: borra <b>todas</b> las confirmaciones, <b>todas</b> las fotos (también los archivos) y los jugadores de la trivia. <b>No</b> toca la lista de invitados ni las preguntas.</p>
+          <div class="fila-botones">
+            <button class="btn btn-peligro" id="btnBorrarPrueba" type="button">🗑 Borrar datos de prueba</button>
+          </div>
+          <p class="suave chico" id="borrarProgreso"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Editor de pregunta -->
+  <div class="modal oculto" id="modalPregunta" role="dialog" aria-modal="true" aria-labelledby="tituloPregunta">
+    <form class="tarjeta modal-caja" id="formPregunta">
+      <h3 class="titulo" id="tituloPregunta">Pregunta</h3>
+      <input type="hidden" name="id">
+      <label class="campo"><span>Pregunta</span><textarea name="texto" maxlength="160" rows="2" required></textarea></label>
+      <p class="etiqueta">Opciones (marcá la correcta)</p>
+      <div class="opciones-editor">
+        <label class="op op0"><input type="radio" name="correcta" value="0" required><span class="forma"></span><input type="text" name="op0" maxlength="60" required placeholder="Opción 1"></label>
+        <label class="op op1"><input type="radio" name="correcta" value="1"><span class="forma"></span><input type="text" name="op1" maxlength="60" required placeholder="Opción 2"></label>
+        <label class="op op2"><input type="radio" name="correcta" value="2"><span class="forma"></span><input type="text" name="op2" maxlength="60" required placeholder="Opción 3"></label>
+        <label class="op op3"><input type="radio" name="correcta" value="3"><span class="forma"></span><input type="text" name="op3" maxlength="60" required placeholder="Opción 4"></label>
+      </div>
+      <div class="grilla-form">
+        <label class="campo campo-chico"><span>Orden</span><input type="number" name="orden" min="1" max="99" value="1"></label>
+        <label class="campo"><span>Foto <small>(opcional)</small></span><input type="file" name="imagen" accept="image/*"></label>
+      </div>
+      <div class="imagen-actual oculto" id="imagenActual"><img alt=""><button type="button" class="link-boton" id="btnQuitarImagen">Quitar foto</button></div>
+      <label class="check"><input type="checkbox" name="activa" checked> <span>Incluir en el juego</span></label>
+      <p class="error-form" id="errorPregunta" role="alert"></p>
+      <div class="fila-botones">
+        <button class="btn btn-oro" type="submit">Guardar</button>
+        <button class="btn" type="button" id="btnCancelarPregunta">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="../config.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/datos.js"></script>
+  <script src="../js/panel.js"></script>
+</body>
+</html>

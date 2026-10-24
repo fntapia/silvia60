@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Trivia · ¿Cuánto conocés a Silvia?</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex, nofollow">  <!-- que no aparezca en buscadores -->
+  <meta property="og:title" content="🎯 Trivia: ¿Cuánto conocés a Silvia?">
+  <meta property="og:image" content="https://fntapia.github.io/silvia60/assets/og.jpg">
+  <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/fotos.css">
+  <link rel="stylesheet" href="../css/trivia.css">
+  <style>
+    .jugador { text-align: center; font-weight: 600; margin: -.4rem 0 1rem; color: var(--tinta-suave); }
+    .jugador b { color: var(--oro-texto); }
+    .estado-grande { text-align: center; }
+    .estado-grande .emoji { font-size: 3.4rem; margin: 0; }
+    .estado-grande .serif { font-size: 1.6rem; font-weight: 700; color: var(--oro-texto); margin: .4rem 0; }
+    .p-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; font-weight: 600; color: var(--tinta-suave); }
+    .p-reloj { font-family: var(--fuente-serif); font-size: 2rem; font-weight: 700; color: var(--oro-texto); min-width: 3ch; text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+    .p-reloj.urgente { color: var(--error); }
+    .p-texto { font-family: var(--fuente-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.2; margin: 0 0 1rem; text-align: center; }
+    .p-opciones { display: grid; gap: 12px; }
+    .p-op { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; padding: 12px 16px; border: 0; border-radius: 18px; background: var(--c); color: #fff; font-family: var(--fuente-serif); font-weight: 700; font-size: 1.35rem; text-align: left; cursor: pointer; box-shadow: 0 6px 14px rgba(0,0,0,.12); transition: transform .12s, opacity .2s; }
+    .p-op:active { transform: scale(.97); }
+    .p-op .forma { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.25); font-size: 1.1rem; }
+    .p-op[disabled] { opacity: .35; cursor: default; }
+    .p-op.elegida { opacity: 1; box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--c); }
+    .puntos-grandes { font-family: var(--fuente-serif); font-size: 3rem; font-weight: 700; color: var(--oro-texto); margin: 0; font-variant-numeric: lining-nums; }
+  </style>
+</head>
+<body>
+  <canvas class="brillos" id="brillos" aria-hidden="true"></canvas>
+  <main class="pagina">
+    <header class="cabecera">
+      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span></p>
+      <h1 class="titulo">¿Cuánto conocés a Silvia?</h1>
+    </header>
+    <p class="jugador oculto" id="jugador">Jugás como <b id="jugadorApodo"></b> · <b id="jugadorPuntos">0</b> puntos</p>
+
+    <section class="tarjeta estado-grande" id="vEspera">
+      <p class="emoji" aria-hidden="true">🎯</p>
+      <p class="serif">La trivia todavía no empezó</p>
+      <p class="suave">Cuando arranque, esta pantalla se actualiza sola. ¡No la cierres!</p>
+    </section>
+
+    <form class="tarjeta oculto" id="vUnirse">
+      <p class="suave centro">Elegí un apodo para el ranking</p>
+      <label class="campo"><span class="sr-only">Apodo</span>
+        <input type="text" id="apodo" maxlength="20" placeholder="Ej: La sobri favorita" autocomplete="nickname" required>
+      </label>
+      <p class="error-form" id="errorApodo" role="alert"></p>
+      <button class="btn btn-oro btn-bloque" type="submit">¡A jugar!</button>
+    </form>
+
+    <section class="tarjeta estado-grande oculto" id="vListo">
+      <p class="emoji" aria-hidden="true">👀</p>
+      <p class="serif">¡Listo! Mirá la pantalla</p>
+      <p class="suave">Las preguntas aparecen allá y acá respondés. Cuanto más rápido, más puntos.</p>
+    </section>
+
+    <section class="oculto" id="vPregunta">
+      <div class="p-cab"><span id="pNum"></span><span class="p-reloj" id="pReloj">20</span></div>
+      <p class="p-texto" id="pTexto"></p>
+      <div class="p-opciones" id="pOpciones"></div>
+    </section>
+
+    <section class="tarjeta estado-grande oculto" id="vEnviada">
+      <p class="emoji" aria-hidden="true">⏳</p>
+      <p class="serif">¡Respuesta enviada!</p>
+      <p class="suave">Esperá el resultado en la pantalla…</p>
+    </section>
+
+    <section class="tarjeta estado-grande oculto" id="vResultado">
+      <p class="emoji" id="rEmoji" aria-hidden="true"></p>
+      <p class="serif" id="rTitulo"></p>
+      <p class="puntos-grandes" id="rPuntos"></p>
+      <p class="suave" id="rPosicion"></p>
+    </section>
+
+    <section class="tarjeta estado-grande oculto" id="vFinal">
+      <p class="emoji" id="fEmoji" aria-hidden="true">🏆</p>
+      <p class="serif" id="fTitulo">¡Terminó la trivia!</p>
+      <p class="suave" id="fDetalle"></p>
+    </section>
+
+    <div class="extras">
+      <a class="btn" href="../fotos/">📸 Subir fotos</a>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="../config.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/datos.js"></script>
+  <script src="../js/trivia.js"></script>
+</body>
+</html>
