@@ -1,5 +1,5 @@
-slug;nombres_a_mostrar;cupo;telefono;notas
-;Familia Pérez;4;264 512-3456;
-;Tía Marta y Tío Carlos;2;2645987654;vienen de Mendoza
-;Lucía Fernández;1;;
-primos-rodriguez;Los primos Rodríguez;3;+54 9 264 444-1122;slug elegido a mano
+slug;nombres_a_mostrar;integrantes;cupo;telefono;notas
+;Familia Pérez;Ana, Luis, Sofi, Tomi;;264 512-3456;cupo vacío: se cuenta solo (4)
+;Tía Marta y Tío Carlos;Marta, Carlos;2;2645987654;vienen de Mendoza
+;Lucía Fernández;;1;;sin integrantes: en la invitación elige la cantidad
+primos-rodriguez;Los primos Rodríguez;Juan, Pedro, Caro;;+54 9 264 444-1122;slug elegido a mano

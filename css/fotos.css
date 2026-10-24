@@ -11,6 +11,10 @@ body { min-height: 100vh; background: radial-gradient(ellipse 90% 45% at 50% 0%,
 .texto-grande { font-size: 1.3rem; font-weight: 500; }
 .suave { color: var(--tinta-suave); }
 
+.cabecera .emblema { --t: 3.8rem; margin-bottom: .2rem; }
+.emojis-rapidos { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 8px; }
+.emojis-rapidos button { width: 38px; height: 38px; border: 1px solid #ececec; border-radius: 10px; background: #fff; font-size: 1.2rem; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
+.emojis-rapidos button:active { transform: scale(.9); background: var(--oro-brillo); }
 .aviso-prueba { margin: 0 0 1rem; padding: .6rem 1rem; border-radius: 14px; background: #1A1A1A; color: #FFF3C4; font-weight: 700; font-size: .92rem; text-align: center; }
 .firma-actual { text-align: center; font-size: 1.05rem; margin: 0 0 1rem; }
 .link-boton { background: none; border: 0; color: var(--oro-texto); font-weight: 600; text-decoration: underline; cursor: pointer; padding: .4rem; min-height: 44px; }

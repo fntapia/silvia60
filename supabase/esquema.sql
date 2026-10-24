@@ -39,8 +39,10 @@ create table if not exists public.grupos (
   nombres text not null check (char_length(nombres) between 1 and 120),
   cupo int not null default 2 check (cupo between 1 and 30),
   telefono text,
+  integrantes text,      -- nombres separados por coma: "Marta, Carlos, Sofi"
   creado timestamptz not null default now()
 );
+alter table public.grupos add column if not exists integrantes text;
 
 create table if not exists public.rsvps (
   id uuid primary key default gen_random_uuid(),
@@ -178,7 +180,9 @@ revoke truncate, references, trigger on all tables in schema public from anon;
 -- ---------------------------------------------------------------------
 create or replace function public.obtener_grupo(p_slug text) returns json
 language sql stable security definer set search_path = public as $$
-  select json_build_object('slug', slug, 'nombres', nombres, 'cupo', cupo) from grupos where slug = lower(trim(p_slug));
+  select json_build_object('slug', slug, 'nombres', nombres, 'cupo', cupo,
+    'integrantes', coalesce((select json_agg(trim(x)) from unnest(string_to_array(integrantes, ',')) x where trim(x) <> ''), '[]'::json))
+  from grupos where slug = lower(trim(p_slug));
 $$;
 
 create or replace function public.obtener_rsvp(p_slug text, p_token uuid) returns json
@@ -217,6 +221,9 @@ begin
   if v_menu not in ('ninguno', 'vegetariano', 'celiaco', 'otro') then v_menu := 'ninguno'; end if;
   v_cant := case when v_asiste = 'si' then greatest(1, coalesce(nullif(p ->> 'cantidad', '')::int, 1)) else 0 end;
   if v_cant > v_cupo then raise exception 'El máximo para esta invitación es %', v_cupo; end if;
+  if jsonb_typeof(p -> 'canciones') = 'array' and jsonb_array_length(p -> 'canciones') > 2 then
+    raise exception 'Podés sumar hasta 2 canciones';
+  end if;
 
   select coalesce(jsonb_agg(jsonb_build_object('tema', left(trim(c ->> 'tema'), 100), 'artista', left(trim(coalesce(c ->> 'artista', '')), 100))), '[]'::jsonb)
     into v_canciones

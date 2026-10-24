@@ -21,7 +21,7 @@
   const hoy = () => new Date().toISOString().slice(0, 10);
   const linkGrupo = g => S60.url('?i=' + encodeURIComponent(g.slug));
   const textoAsiste = { si: 'Sí', no: 'No', nose: 'Todavía no sabe' };
-  const textoMenu = { ninguno: '', vegetariano: 'Vegetariano', celiaco: 'Celíaco', otro: 'Otro' };
+  const listaIntegrantes = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
   async function conBoton(btn, fn) {
     btn.disabled = true;
     try { await fn(); } catch (e) { toast(e.message || 'Algo salió mal', 'error', 5000); } finally { btn.disabled = false; }
@@ -82,7 +82,7 @@
         const r = rsvpDe(g);
         const estado = r ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>` : '<span class="pill sin">Sin respuesta</span>';
         return `<tr data-id="${g.id}">
-          <td><b>${esc(g.nombres)}</b>${g.telefono ? `<br><small class="suave">${esc(g.telefono)}</small>` : ''}</td>
+          <td><b>${esc(g.nombres)}</b>${listaIntegrantes(g.integrantes).length ? `<br><small>👥 ${esc(listaIntegrantes(g.integrantes).join(', '))}</small>` : ''}${g.telefono ? `<br><small class="suave">${esc(g.telefono)}</small>` : ''}</td>
           <td>${g.cupo}</td>
           <td>${estado}</td>
           <td><code>?i=${esc(g.slug)}</code></td>
@@ -103,6 +103,8 @@
     } else if (b.dataset.accion === 'editar') {
       const f = $('#formGrupo');
       f.id.value = g.id; f.nombres.value = g.nombres; f.cupo.value = g.cupo; f.telefono.value = g.telefono || ''; f.slug.value = g.slug;
+      f.integrantes.value = listaIntegrantes(g.integrantes).join(', ');
+      cupoManual = listaIntegrantes(g.integrantes).length !== g.cupo;
       $('#btnGuardarGrupo').textContent = 'Guardar cambios';
       $('#btnCancelarGrupo').classList.remove('oculto');
       f.scrollIntoView({ behavior: 'smooth' }); f.nombres.focus();
@@ -112,13 +114,19 @@
     }
   });
   function limpiarFormGrupo() {
-    const f = $('#formGrupo'); f.reset(); f.id.value = ''; slugManual = false;
+    const f = $('#formGrupo'); f.reset(); f.id.value = ''; slugManual = false; cupoManual = false;
     $('#btnGuardarGrupo').textContent = 'Agregar grupo';
     $('#btnCancelarGrupo').classList.add('oculto');
   }
   $('#btnCancelarGrupo').addEventListener('click', limpiarFormGrupo);
-  let slugManual = false;
+  let slugManual = false, cupoManual = false;
   $('#formGrupo').slug.addEventListener('input', () => { slugManual = true; });
+  // El cupo se calcula solo con la cantidad de integrantes (salvo que lo hayan cambiado a mano)
+  $('#formGrupo').cupo.addEventListener('input', () => { cupoManual = true; });
+  $('#formGrupo').integrantes.addEventListener('input', e => {
+    const n = listaIntegrantes(e.target.value).length;
+    if (n && !cupoManual) $('#formGrupo').cupo.value = Math.min(30, n);
+  });
   $('#formGrupo').nombres.addEventListener('input', e => {
     const f = $('#formGrupo');
     if (!f.id.value && !slugManual) f.slug.value = nuevoSlug(e.target.value);
@@ -133,9 +141,12 @@
   $('#formGrupo').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target;
-    const g = { id: f.id.value || null, nombres: f.nombres.value.trim(), cupo: parseInt(f.cupo.value, 10), telefono: f.telefono.value.trim(), slug: (f.slug.value.trim() || nuevoSlug(f.nombres.value)).toLowerCase() };
+    const integ = listaIntegrantes(f.integrantes.value);
+    const g = { id: f.id.value || null, nombres: f.nombres.value.trim(), cupo: parseInt(f.cupo.value, 10), telefono: f.telefono.value.trim(),
+      integrantes: integ.join(', '), slug: (f.slug.value.trim() || nuevoSlug(f.nombres.value)).toLowerCase() };
     if (!g.nombres) return;
     if (!(g.cupo >= 1 && g.cupo <= 30)) { toast('El cupo tiene que ser entre 1 y 30', 'error'); return; }
+    if (integ.length > g.cupo) { toast(`Hay ${integ.length} integrantes y el cupo es ${g.cupo}: subí el cupo o sacá nombres`, 'error', 6000); return; }
     await conBoton($('#btnGuardarGrupo'), async () => {
       await A.guardarGrupo(g);
       toast(g.id ? 'Cambios guardados ✔' : 'Grupo agregado ✔');
@@ -144,7 +155,8 @@
     });
   });
 
-  // Importar CSV. Formato de "07 Invitados/invitados.csv": slug;nombres_a_mostrar;cupo;telefono;notas
+  // Importar CSV. Formato de "07 Invitados/invitados.csv": slug;nombres_a_mostrar;integrantes;cupo;telefono;notas
+  // (integrantes separados por coma: "Marta, Carlos, Sofi"; si el cupo viene vacío se cuenta solo).
   // También acepta el formato corto nombres;cupo;telefono. Slug vacío → se genera con 4 letras al azar.
   const SLUGS_IGNORADOS = ['familia-ejemplo'];
   function leerCsvInvitados(texto) {
@@ -157,15 +169,21 @@
     let col = { slug: -1, nombres: 0, cupo: 1, telefono: 2 };
     if (filas[0].some(c => /nombre/.test(norm(c)))) {
       const enc = filas.shift().map(norm);
-      col = { slug: enc.findIndex(c => c === 'slug'), nombres: enc.findIndex(c => /nombre/.test(c)), cupo: enc.findIndex(c => /cupo/.test(c)), telefono: enc.findIndex(c => /tel/.test(c)) };
+      col = { slug: enc.findIndex(c => c === 'slug'), nombres: enc.findIndex(c => /nombre/.test(c)), cupo: enc.findIndex(c => /cupo/.test(c)),
+        telefono: enc.findIndex(c => /tel/.test(c)), integrantes: enc.findIndex(c => /integrante/.test(c)) };
     }
     const dato = (f, i) => (i >= 0 && f[i] != null ? f[i] : '').trim();
-    return filas.map(f => ({
-      slug: S60.slugificar(dato(f, col.slug)).replace(/^-|-$/g, ''),
-      nombres: dato(f, col.nombres),
-      cupo: Math.max(1, Math.min(30, parseInt(dato(f, col.cupo), 10) || 1)),
-      telefono: dato(f, col.telefono)
-    })).filter(g => g.nombres && !SLUGS_IGNORADOS.includes(g.slug));
+    return filas.map(f => {
+      const integ = listaIntegrantes(dato(f, col.integrantes));
+      const cupoCsv = parseInt(dato(f, col.cupo), 10);
+      return {
+        slug: S60.slugificar(dato(f, col.slug)).replace(/^-|-$/g, ''),
+        nombres: dato(f, col.nombres),
+        integrantes: integ.join(', '),
+        cupo: Math.max(1, Math.min(30, Math.max(cupoCsv || 0, integ.length) || 1)),
+        telefono: dato(f, col.telefono)
+      };
+    }).filter(g => g.nombres && !SLUGS_IGNORADOS.includes(g.slug));
   }
   $('#inputCsv').addEventListener('change', async e => {
     const archivo = e.target.files[0];
@@ -205,13 +223,11 @@
     const lugares = grupos.reduce((a, g) => a + g.cupo, 0);
     const n = (num, txt) => `<div class="num"><b>${num}</b><span>${txt}</span></div>`;
     $('#numeros').innerHTML = n(personas, 'personas confirmadas') + n(si.length, 'grupos que vienen') + n(no.length, 'no van') + n(nose.length, 'todavía no saben') + n(sinResp, 'grupos sin respuesta') + n(lugares, 'lugares reservados');
-    const menus = si.filter(r => r.menu && r.menu !== 'ninguno');
-    $('#menus').innerHTML = menus.length ? menus.map(r => `<p><b>${esc(textoMenu[r.menu])}</b> — ${esc(r.menu_detalle || '')} <span class="suave">(${esc(nombreRsvp(r))})</span></p>`).join('') : '<p class="suave">Nadie pidió menú especial todavía.</p>';
     if (!rsvps.length) { $('#tablaRsvp').innerHTML = '<tr><td class="vacio-tabla">Todavía no hay respuestas.</td></tr>'; return; }
-    $('#tablaRsvp').innerHTML = `<thead><tr><th>Grupo / nombre</th><th>¿Viene?</th><th>Cant.</th><th>Quiénes</th><th>Menú</th><th>Actualizado</th></tr></thead><tbody>` +
+    $('#tablaRsvp').innerHTML = `<thead><tr><th>Grupo / nombre</th><th>¿Viene?</th><th>Cant.</th><th>Quiénes vienen</th><th>Actualizado</th></tr></thead><tbody>` +
       rsvps.map(r => `<tr><td><b>${esc(nombreRsvp(r))}</b>${r.grupo ? '' : ' <small class="suave">(link general)</small>'}</td>
         <td><span class="pill ${r.asiste}">${textoAsiste[r.asiste]}</span></td><td>${r.cantidad || ''}</td>
-        <td>${esc(r.nombres_asistentes || '')}</td><td>${esc([textoMenu[r.menu], r.menu_detalle].filter(Boolean).join(': '))}</td>
+        <td>${r.asiste === 'si' ? esc(r.nombres_asistentes || '') : ''}</td>
         <td><small>${S60.formatoFechaHora(r.actualizado)}</small></td></tr>`).join('') + '</tbody>';
   }
   const nombreRsvp = r => r.grupo ? r.grupo.nombres : (r.nombre_contacto || 'Sin nombre');
@@ -222,9 +238,8 @@
       { titulo: 'Cupo', valor: r => r.grupo ? r.grupo.cupo : '' },
       { titulo: '¿Viene?', valor: r => r.asiste ? textoAsiste[r.asiste] : 'Sin respuesta' },
       { titulo: 'Cantidad', valor: r => r.asiste === 'si' ? r.cantidad : 0 },
-      { titulo: 'Quiénes', valor: r => r.nombres_asistentes || '' },
-      { titulo: 'Menú especial', valor: r => textoMenu[r.menu] || '' },
-      { titulo: 'Detalle menú', valor: r => r.menu_detalle || '' },
+      { titulo: 'Quiénes vienen', valor: r => r.asiste === 'si' ? (r.nombres_asistentes || '') : '' },
+      { titulo: 'Integrantes del grupo', valor: r => r.grupo ? listaIntegrantes(r.grupo.integrantes).join(', ') : '' },
       { titulo: 'Link', valor: r => r.grupo ? linkGrupo(r.grupo) : '' },
       { titulo: 'Actualizado', valor: r => r.actualizado ? S60.formatoFechaHora(r.actualizado) : '' }
     ]), `confirmaciones-silvia60-${hoy()}.csv`);

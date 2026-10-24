@@ -17,7 +17,7 @@
   <!-- LOGIN -->
   <section class="login" id="login">
     <form class="tarjeta login-caja" id="formLogin">
-      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span></p>
+      <div class="logo"><div class="emblema" aria-label="60 · Silvia"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div></div>
       <h1 class="titulo">Panel de administración</h1>
       <label class="campo"><span>Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="campo"><span>Contraseña</span><input type="password" id="loginClave" autocomplete="current-password" required></label>
@@ -30,7 +30,7 @@
   <!-- PANEL -->
   <div class="panel oculto" id="panel">
     <header class="barra-sup">
-      <p class="logo"><span class="script oro-brillante">Silvia</span> <span class="logo-60">60</span> <span class="suave chico">· Panel</span></p>
+      <div class="logo logo-panel"><div class="emblema" aria-label="60 · Silvia"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div><span class="suave chico">Panel</span></div>
       <div class="barra-acciones">
         <a class="btn btn-chico" href="../pantalla/" target="_blank" rel="noopener">Abrir pantalla ↗</a>
         <button class="btn btn-chico" id="btnSalir" type="button">Salir</button>
@@ -61,6 +61,7 @@
             <label class="campo campo-chico"><span>Cupo</span><input type="number" name="cupo" min="1" max="30" value="2" required></label>
             <label class="campo"><span>Teléfono <small>(opcional)</small></span><input type="tel" name="telefono" maxlength="30" placeholder="264 512-3456"></label>
             <label class="campo"><span>Link <small>(se arma solo)</small></span><input type="text" name="slug" maxlength="60" pattern="[a-z0-9-]{3,60}" placeholder="familia-gomez-x7k2"></label>
+            <label class="campo campo-ancho"><span>Integrantes <small>(separados por coma · el cupo se cuenta solo)</small></span><input type="text" name="integrantes" maxlength="400" placeholder="Ej: Marta, Carlos, Sofi, Juan"></label>
           </div>
           <div class="fila-botones">
             <button class="btn btn-oro" type="submit" id="btnGuardarGrupo">Agregar grupo</button>
@@ -79,8 +80,6 @@
           <button class="btn btn-chico" id="btnExportarRsvp" type="button">⬇ Exportar Excel/CSV</button>
         </div>
         <div class="tarjetas-num" id="numeros"></div>
-        <h3 class="subtitulo">Menús especiales</h3>
-        <div id="menus" class="lista-simple"></div>
         <h3 class="subtitulo">Todas las respuestas</h3>
         <div class="tabla-wrap"><table class="tabla" id="tablaRsvp"></table></div>
       </section>

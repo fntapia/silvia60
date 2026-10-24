@@ -138,6 +138,7 @@
         <p class="eyebrow">Confirmá tu asistencia</p>
         <h2 class="titulo grande" id="rsvpTitulo">¿Me acompañás?</h2>
         <p class="suave" id="rsvpLimite">Tenés tiempo hasta el 20 de noviembre.</p>
+        <p class="rsvp-onda">Confirmá y preparate para una noche inolvidable ✨</p>
 
         <div class="tarjeta rsvp-tarjeta">
           <div id="rsvpCargando" class="centro suave">Cargando…</div>
@@ -170,39 +171,35 @@
             </fieldset>
 
             <div id="bloqueSi" class="oculto">
-              <div class="campo">
-                <span class="etiqueta">¿Cuántos van a venir?</span>
-                <div class="contador">
-                  <button type="button" class="btn btn-chico" id="menos" aria-label="Uno menos">−</button>
-                  <output id="cantidadVer" aria-live="polite">1</output>
-                  <button type="button" class="btn btn-chico" id="mas" aria-label="Uno más">+</button>
-                  <small id="cupoInfo"></small>
-                </div>
-                <input type="hidden" name="cantidad" value="1">
-              </div>
-
-              <label class="campo">
-                <span>Nombres de quienes vienen</span>
-                <textarea name="nombres_asistentes" maxlength="400" rows="2" placeholder="Ej: Marta, Carlos y Sofi"></textarea>
-              </label>
-
-              <fieldset class="campo sin-borde">
-                <legend class="etiqueta">¿Alguien necesita un menú especial?</legend>
-                <div class="opciones">
-                  <label class="opcion"><input type="radio" name="menu" value="ninguno" checked><span>No</span></label>
-                  <label class="opcion"><input type="radio" name="menu" value="vegetariano"><span>Vegetariano</span></label>
-                  <label class="opcion"><input type="radio" name="menu" value="celiaco"><span>Celíaco</span></label>
-                  <label class="opcion"><input type="radio" name="menu" value="otro"><span>Otro</span></label>
-                </div>
+              <!-- Grupo con integrantes cargados: una casilla por persona -->
+              <fieldset class="campo sin-borde oculto" id="bloqueIntegrantes">
+                <legend class="etiqueta">¿Quiénes vienen?</legend>
+                <div class="integrantes" id="listaIntegrantes"></div>
+                <small class="suave" id="integrantesInfo">Destildá a quien no pueda venir.</small>
               </fieldset>
-              <label class="campo oculto" id="campoMenuDetalle">
-                <span>Contanos el detalle</span>
-                <input type="text" name="menu_detalle" maxlength="200" placeholder="Ej: 1 celíaco (Sofi)">
-              </label>
+
+              <!-- Link general o grupo sin integrantes: cantidad + nombres -->
+              <div id="bloqueCantidad">
+                <div class="campo">
+                  <span class="etiqueta">¿Cuántos van a venir?</span>
+                  <div class="contador">
+                    <button type="button" class="btn btn-chico" id="menos" aria-label="Uno menos">−</button>
+                    <output id="cantidadVer" aria-live="polite">1</output>
+                    <button type="button" class="btn btn-chico" id="mas" aria-label="Uno más">+</button>
+                    <small id="cupoInfo"></small>
+                  </div>
+                  <input type="hidden" name="cantidad" value="1">
+                </div>
+
+                <label class="campo">
+                  <span>Nombres de quienes vienen</span>
+                  <textarea name="nombres_asistentes" maxlength="400" rows="2" placeholder="Ej: Marta, Carlos y Sofi"></textarea>
+                </label>
+              </div>
 
               <div class="cancion-bloque">
                 <span class="emoji-salto chico" aria-hidden="true">🎶</span>
-                <p class="eyebrow">Tu canción</p>
+                <p class="eyebrow">Hasta 2 canciones 🎶</p>
                 <p class="cancion-pregunta">¿Qué canción no puede faltar en la pista?</p>
                 <div class="cancion" data-i="0">
                   <input type="text" name="tema0" maxlength="100" placeholder="Tema" aria-label="Tema de la canción 1">
@@ -240,7 +237,9 @@
         <p class="eyebrow">Fotos de la fiesta</p>
         <div class="polaroids" aria-hidden="true"><span>🥂</span><span>💃</span><span>🎂</span></div>
         <div class="tarjeta">
-          <p class="texto-grande" id="fotosTexto">El día de la fiesta, desde acá vas a poder sacar fotos que aparecerán en la pantalla del salón</p>
+          <p class="fotos-titulo" id="fotosTitulo">¡Esa noche el fotógrafo sos vos!</p>
+          <p class="texto" id="fotosTexto">Desde la cena hasta el último tema, sacá fotos desde acá y aparecen al instante en la pantalla del salón 🎉</p>
+          <p class="texto fotos-vale">Brindis 🥂, abrazos 🤗, pasos prohibidos en la pista 💃… ¡todo vale! <span class="suave">(bueno, casi todo 😉)</span></p>
         </div>
         <div class="acciones">
           <a class="btn btn-oro oculto" id="btnSubirFotos" href="fotos/">Subir fotos</a>
@@ -253,15 +252,13 @@
     <section class="lamina cierre" data-nombre="cierre">
       <div class="ornamento sup-izq"></div><div class="ornamento sup-der"></div><div class="ornamento inf-izq"></div><div class="ornamento inf-der"></div>
       <div class="contenido">
-        <div class="cierre-globo" aria-hidden="true">
-          <div class="cierre-halo"></div>
-          <span class="globo-num">60</span>
-          <svg class="globo-hilo" viewBox="0 0 40 120" fill="none"><path d="M20 0 C 6 20, 34 34, 20 54 S 6 88, 20 120" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="cierre-globo">
+          <div class="cierre-halo" aria-hidden="true"></div>
+          <div class="emblema cierre-emblema" aria-label="60 · Silvia"><span class="emblema-60">60</span><span class="emblema-nombre" id="cierreFirma">Silvia</span></div>
         </div>
         <p class="eyebrow">Con todo mi cariño</p>
         <div class="tarjeta cierre-tarjeta">
           <p class="cierre-texto" id="cierreTexto">Gracias por ser parte de mi vida. ¡Los espero!</p>
-          <p class="firma" id="cierreFirma">Silvia</p>
         </div>
         <button class="btn btn-chico" id="btnVolver" type="button">↑ Volver al inicio</button>
       </div>

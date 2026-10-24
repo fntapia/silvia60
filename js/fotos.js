@@ -90,6 +90,13 @@
     li.querySelector('.item-descartar').addEventListener('click', () => { pendientes.delete(it); li.remove(); actualizarPublicarTodas(); });
     li.querySelector('.item-reintentar').addEventListener('click', () => procesar(it));
     li.querySelector('.item-leyenda').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); publicar(it); } });
+    // Emojis rápidos: se suman al final de la leyenda (respetando el máximo de caracteres)
+    li.querySelector('.emojis-rapidos').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const inp = li.querySelector('.item-leyenda');
+      const nuevo = (inp.value.trimEnd() + ' ' + b.textContent).trimStart();
+      if (nuevo.length <= C.fotos.leyendaMax) inp.value = nuevo;
+    });
   }
 
   function actualizarPublicarTodas() { $('#publicarTodas').classList.toggle('oculto', pendientes.size < 2); }

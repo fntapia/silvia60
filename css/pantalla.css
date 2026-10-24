@@ -14,6 +14,8 @@ body.pantalla .ornamento { width: 16rem; height: 16rem; }
 
 .logo-pantalla { position: absolute; top: 1.4rem; left: 2.2rem; z-index: 5; display: flex; align-items: baseline; gap: .5rem; }
 .logo-pantalla .script { font-size: 4.2rem; line-height: 1; }
+.logo-pantalla { top: .7rem; left: 3.4rem; }
+.logo-pantalla .emblema { --t: 4.4rem; }
 .logo-60 { font-family: var(--fuente-serif); font-weight: 700; font-size: 3.4rem; }
 
 /* Vacío */

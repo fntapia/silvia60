@@ -27,7 +27,7 @@ window.CONFIG = {
     localidad: 'Chimbas, San Juan, Argentina'
   },
   // Pegá acá el link exacto del pin de Google Maps (si queda vacío, se busca la dirección)
-  mapsUrl: '',
+  mapsUrl: 'https://maps.app.goo.gl/Y4UzwntUFD6N6WxSA',   // pin exacto del Salón de Fer
 
   // --- Confirmaciones ---
   fechaLimiteRsvp: '2026-11-20T23:59:59-03:00',

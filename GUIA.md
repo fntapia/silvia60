@@ -94,7 +94,8 @@ En Google Maps buscá el salón → **Compartir** → **Copiar vínculo** → pe
 ### ☐ Invitados
 Entrá a `.../silvia60/panel/` con tu email y contraseña → **Invitados**:
 - De a uno: escribí los nombres a mostrar (ej. «Familia Gómez»), el cupo y el teléfono. El link se arma solo (con 4 letras al azar al final para que nadie adivine el de otra familia).
-- Todos juntos desde Excel: completá `07 Invitados/invitados.csv` (columnas **slug; nombres_a_mostrar; cupo; telefono; notas**, separadas por `;`). Dejá el **slug vacío** y se genera solo; la fila `familia-ejemplo` se ignora. Después, en el panel, **Importar CSV** y elegí ese archivo. Si importás dos veces, los que ya estaban se saltean.
+- **Integrantes:** escribí los nombres separados por coma (ej. «Marta, Carlos, Sofi, Juan»). El cupo se cuenta solo, y en la invitación esa familia ve una casilla por persona («¿Quiénes vienen?»). Sin integrantes, la invitación pide cantidad y nombres.
+- Todos juntos desde Excel: completá `07 Invitados/invitados.csv` (columnas **slug; nombres_a_mostrar; integrantes; cupo; telefono; notas**, separadas por `;`). Dejá el **slug vacío** y se genera solo; si el **cupo** queda vacío se cuenta con los integrantes; la fila `familia-ejemplo` se ignora. Después, en el panel, **Importar CSV** y elegí ese archivo. Si importás dos veces, los que ya estaban se saltean.
 - Botón **WhatsApp** de cada grupo: abre WhatsApp con el mensaje y su link personal listos para mandar. El texto del mensaje se cambia en `config.js` (`mensajeWhatsApp`).
 - El link general (sin `?i=`) también sirve: pide nombre y cantidad.
 

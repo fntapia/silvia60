@@ -78,6 +78,15 @@
     l.prepend(capa);
   });
 
+  /* ---------- Emblema "60 · Silvia" como sello arriba de cada pantalla (portada y cierre lo tienen grande) ---------- */
+  $$('.lamina:not(.portada):not(.cierre)').forEach(l => {
+    const s = document.createElement('div');
+    s.className = 'emblema emblema-sello';
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = `<span class="emblema-60">${esc(String(C.edad))}</span><span class="emblema-nombre">${esc(C.homenajeada)}</span>`;
+    l.prepend(s);
+  });
+
   /* ---------- Emojis que saltan al entrar y al tocarlos ---------- */
   function saltar(el) { el.classList.remove('salta'); void el.offsetWidth; el.classList.add('salta'); }
   document.addEventListener('click', e => { const em = e.target.closest('.emoji-salto'); if (em) saltar(em); });
@@ -161,13 +170,24 @@
   async function revisarFotos() {
     if (S60.fotosHabilitadas(await S60.modoPruebaActivo())) {
       $('#btnSubirFotos').classList.remove('oculto');
-      $('#fotosTexto').textContent = '¡Sacá fotos y aparecerán en la pantalla del salón!';
+      $('#fotosTitulo').textContent = '¡Hoy el fotógrafo sos vos!';
     } else setTimeout(revisarFotos, 60000);
   }
   revisarFotos();
 
   /* ---------- Personalización ---------- */
+  const integrantes = () => (grupo && Array.isArray(grupo.integrantes)) ? grupo.integrantes : [];
+  const unirNombres = l => l.length <= 1 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' y ' + l[l.length - 1];
   function personalizar() {
+    if (integrantes().length) {
+      // Una casilla grande por integrante, todas tildadas
+      $('#bloqueIntegrantes').classList.remove('oculto');
+      $('#bloqueCantidad').classList.add('oculto');
+      $('#listaIntegrantes').innerHTML = integrantes().map((n, i) =>
+        `<label class="integrante"><input type="checkbox" name="integrante" value="${esc(n)}" checked><span class="tilde" aria-hidden="true">✓</span><span>${esc(n)}</span></label>`).join('');
+      $('#listaIntegrantes').addEventListener('change', marcarIntegrantes);
+      marcarIntegrantes();
+    }
     if (grupo) {
       const plural = grupo.cupo > 1;
       $('#saludoNombres').textContent = 'Hola, ' + grupo.nombres;
@@ -201,10 +221,15 @@
   function actualizarVisibles() {
     const asiste = (form.querySelector('[name=asiste]:checked') || {}).value;
     $('#bloqueSi').classList.toggle('oculto', asiste !== 'si');
-    const menu = (form.querySelector('[name=menu]:checked') || {}).value;
-    $('#campoMenuDetalle').classList.toggle('oculto', !menu || menu === 'ninguno');
+  }
+  const tildados = () => $$('#listaIntegrantes input:checked').map(i => i.value);
+  function marcarIntegrantes() {
+    $$('#listaIntegrantes .integrante').forEach(l => l.classList.toggle('no-viene', !l.querySelector('input').checked));
+    const n = tildados().length;
+    $('#integrantesInfo').textContent = n === 0 ? 'Si no viene nadie, se envía como «No podremos».' : `Vienen ${n} de ${integrantes().length}. Destildá a quien no pueda venir.`;
   }
   form.addEventListener('change', actualizarVisibles);
+  // Hasta 2 canciones: al mostrar la segunda, el botón desaparece (no hay tercera)
   $('#btnOtraCancion').addEventListener('click', () => { $('#cancion2').classList.remove('oculto'); $('#btnOtraCancion').classList.add('oculto'); form.tema1.focus(); });
 
   function claveToken() { return 'rsvp_token_' + (grupo ? grupo.slug : 'general'); }
@@ -215,8 +240,12 @@
     const a = form.querySelector(`[name=asiste][value="${r.asiste}"]`); if (a) a.checked = true;
     setCantidad(r.cantidad || (grupo ? grupo.cupo : 1));
     form.nombres_asistentes.value = r.nombres_asistentes || '';
-    const m = form.querySelector(`[name=menu][value="${r.menu || 'ninguno'}"]`); if (m) m.checked = true;
-    form.menu_detalle.value = r.menu_detalle || '';
+    if (integrantes().length) {
+      // tildar solo a quienes figuran como que vienen
+      const vienen = r.asiste === 'si' ? String(r.nombres_asistentes || '').split(/\s*,\s*|\s+y\s+/).map(s => s.trim().toLowerCase()) : [];
+      $$('#listaIntegrantes input').forEach(i => { i.checked = r.asiste !== 'si' || vienen.includes(i.value.toLowerCase()); });
+      marcarIntegrantes();
+    }
     (r.canciones || []).forEach((c, i) => { form['tema' + i].value = c.tema || ''; form['artista' + i].value = c.artista || ''; });
     if ((r.canciones || []).length > 1) { $('#cancion2').classList.remove('oculto'); $('#btnOtraCancion').classList.add('oculto'); }
     form.mensaje.value = r.mensaje || '';
@@ -225,9 +254,10 @@
   }
 
   function textoGracias(r) {
-    if (r.asiste === 'si') return r.cantidad > 1 ? `¡Gracias! ${C.homenajeada} ya sabe que vienen 💛` : `¡Gracias! ${C.homenajeada} ya sabe que venís 💛`;
+    if (r.asiste === 'si') return esc(r.cantidad > 1 ? `¡Gracias! ${C.homenajeada} ya sabe que vienen 💛` : `¡Gracias! ${C.homenajeada} ya sabe que venís 💛`) +
+      '<span class="celebracion-sub">Vení con la mejor onda, que la vamos a pasar súper divertido 💃🕺🎉</span>';
     if (r.asiste === 'no') return '¡Gracias por avisar! Te vamos a extrañar 💛';
-    return `¡Gracias! Acordate de confirmar antes del ${C.fechaLimiteTexto} 💛`;
+    return esc(`¡Gracias! Acordate de confirmar antes del ${C.fechaLimiteTexto} 💛`);
   }
 
   function mostrarResumen(r) {
@@ -235,9 +265,10 @@
     form.classList.add('oculto');
     $('#rsvpResumen').classList.remove('oculto');
     const titulos = { si: r.cantidad > 1 ? `¡Confirmaron ${r.cantidad} personas!` : '¡Confirmaste tu asistencia!', no: 'Nos avisaste que no podrán venir', nose: 'Nos dijiste que todavía no sabés' };
+    if (r.asiste === 'si' && integrantes().length && r.nombres_asistentes) titulos.si = `Vienen ${r.cantidad}: ${r.nombres_asistentes}`;
     $('#resumenTitulo').textContent = titulos[r.asiste];
     const partes = [];
-    if (r.asiste === 'si' && r.nombres_asistentes) partes.push(r.nombres_asistentes);
+    if (r.asiste === 'si' && r.nombres_asistentes && !integrantes().length) partes.push(r.nombres_asistentes);
     if (r.canciones && r.canciones.length) partes.push('🎶 ' + r.canciones.map(c => c.tema + (c.artista ? ' – ' + c.artista : '')).join(' · '));
     $('#resumenDetalle').textContent = partes.join('  ·  ');
     $('#btnModificar').classList.toggle('oculto', !S60.rsvpAbierto());
@@ -255,19 +286,24 @@
     e.preventDefault();
     const err = $('#errorRsvp');
     err.textContent = '';
-    const asiste = (form.querySelector('[name=asiste]:checked') || {}).value;
+    let asiste = (form.querySelector('[name=asiste]:checked') || {}).value;
     if (!grupo && !form.nombre_contacto.value.trim()) { err.textContent = 'Contanos tu nombre, así sabemos quién confirma 🙂'; form.nombre_contacto.focus(); return; }
     if (!asiste) { err.textContent = 'Elegí si vienen, si no pueden o si todavía no saben.'; return; }
-    const canciones = [0, 1].map(i => ({ tema: form['tema' + i].value.trim(), artista: form['artista' + i].value.trim() })).filter(c => c.tema);
-    const menu = form.querySelector('[name=menu]:checked').value;
-    if (asiste === 'si' && menu !== 'ninguno' && !form.menu_detalle.value.trim() && menu === 'otro') { err.textContent = 'Contanos qué menú especial necesitan.'; form.menu_detalle.focus(); return; }
+    const canciones = [0, 1].map(i => ({ tema: form['tema' + i].value.trim(), artista: form['artista' + i].value.trim() })).filter(c => c.tema).slice(0, 2);
+    // Con integrantes: la cantidad son las casillas tildadas; si no queda nadie tildado, es "No podremos"
+    let cant = cantidad, nombres = form.nombres_asistentes.value.trim();
+    if (asiste === 'si' && integrantes().length) {
+      const t = tildados();
+      if (!t.length) asiste = 'no';
+      cant = t.length; nombres = unirNombres(t);
+    }
     const datos = {
       nombre_contacto: form.nombre_contacto.value.trim(),
       asiste,
-      cantidad: asiste === 'si' ? cantidad : 0,
-      nombres_asistentes: asiste === 'si' ? form.nombres_asistentes.value.trim() : '',
-      menu: asiste === 'si' ? menu : 'ninguno',
-      menu_detalle: asiste === 'si' && menu !== 'ninguno' ? form.menu_detalle.value.trim() : '',
+      cantidad: asiste === 'si' ? cant : 0,
+      nombres_asistentes: asiste === 'si' ? nombres : '',
+      menu: 'ninguno',
+      menu_detalle: '',
       canciones: asiste === 'si' ? canciones : [],
       mensaje: form.mensaje.value.trim(),
       mostrar_mensaje: form.mostrar_mensaje.checked
@@ -278,7 +314,7 @@
       const r = await Datos.guardarRsvp(grupo ? grupo.slug : null, local.leer(claveToken()), datos);
       if (r && r.token) local.guardar(claveToken(), r.token);
       rsvpActual = Object.assign({}, datos, { token: r && r.token });
-      $('#celebracionTexto').textContent = textoGracias(rsvpActual);
+      $('#celebracionTexto').innerHTML = textoGracias(rsvpActual);
       $('#celebracionIcono').textContent = { si: '🥳', no: '💛', nose: '✨' }[asiste];
       $('#celebracion').classList.remove('oculto');
       $('#btnCerrarCelebracion').focus();

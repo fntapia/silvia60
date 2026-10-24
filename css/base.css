@@ -185,6 +185,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   50% { transform: translateY(0) scale(.94, 1.06); } 70% { transform: translateY(-8px) rotate(5deg); } 100% { transform: none; }
 }
 
+/* Emblema "60 · Silvia": el 60 en foil dorado con "Silvia" en cursiva cruzándolo. Tamaño con --t */
+.emblema { --t: 3rem; position: relative; display: inline-flex; flex-direction: column; align-items: center; line-height: 1; text-decoration: none; user-select: none; }
+.emblema-60 { display: block; font-family: var(--fuente-serif); font-weight: 900; font-size: var(--t); letter-spacing: -.045em; line-height: .9;
+  background: linear-gradient(160deg, #FFF3C4 0%, #F5D97A 18%, #D4AF37 42%, #B8860B 60%, #F5D97A 78%, #FFF3C4 92%); background-size: 100% 220%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: lining-nums;
+  filter: drop-shadow(0 calc(var(--t) * .025) 0 #a87b06) drop-shadow(0 calc(var(--t) * .08) calc(var(--t) * .12) rgba(184, 134, 11, .35));
+  animation: emblema-brillo 3.5s ease-in-out infinite; }
+@keyframes emblema-brillo { 0%, 100% { background-position: 50% 0%; } 50% { background-position: 50% 100%; } }
+.emblema-nombre { position: relative; display: block; margin-top: calc(var(--t) * -.34); transform: rotate(-6deg);
+  font-family: var(--fuente-script); font-style: italic; font-weight: 800; font-size: calc(var(--t) * .44); letter-spacing: -.01em; color: var(--tinta);
+  text-shadow: 0 0 2px #fff, 0 0 4px #fff, 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; }
+/* Sello chico arriba al centro de cada pantalla */
+.emblema-sello { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 3; --t: 2.7rem; }
+/* en tamaños chicos el foil claro se lava: dorado más profundo */
+.emblema-sello .emblema-60, .logo-panel .emblema-60 { background-image: linear-gradient(160deg, #F5D97A 0%, #D4AF37 35%, #B8860B 62%, #D4AF37 85%, #F5D97A 100%); }
+body.con-demo .emblema-sello { top: 40px; }
+
 /* "60" de los logos en dorado metalizado */
 .logo-60 { font-family: var(--fuente-serif) !important; font-weight: 900 !important; background: var(--grad-oro); background-size: 250% 100%;
   -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: foil 5s ease-in-out infinite; }

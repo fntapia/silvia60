@@ -142,7 +142,7 @@
         },
         async guardarGrupo(g) {
           const s = await db();
-          const fila = { slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || null };
+          const fila = { slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || null, integrantes: g.integrantes || null };
           const q = g.id ? s.from('grupos').update(fila).eq('id', g.id) : s.from('grupos').insert(fila);
           const { error } = await q;
           if (error) throw new Error(/duplicate|unique/i.test(error.message) ? 'Ese link (slug) ya existe' : error.message);
@@ -255,7 +255,7 @@
       const p = (orden, texto, opciones, correcta) => ({ id: crypto.randomUUID(), orden, texto, opciones, correcta, imagen: null, activa: true, creado: ahora });
       return {
         grupos: [
-          { id: crypto.randomUUID(), slug: 'familia-gomez', nombres: 'Familia Gómez', cupo: 4, telefono: '2645123456', creado: ahora },
+          { id: crypto.randomUUID(), slug: 'familia-gomez', nombres: 'Familia Gómez', cupo: 4, telefono: '2645123456', integrantes: 'Marta, Carlos, Sofi, Juan', creado: ahora },
           { id: crypto.randomUUID(), slug: 'tia-marta', nombres: 'Tía Marta y Tío Carlos', cupo: 2, telefono: '', creado: ahora }
         ],
         rsvps: [], fotos: [],
@@ -343,7 +343,7 @@
       async obtenerGrupo(slug) {
         await espera();
         const g = leer().grupos.find(x => x.slug === String(slug || '').toLowerCase());
-        return g ? { slug: g.slug, nombres: g.nombres, cupo: g.cupo } : null;
+        return g ? { slug: g.slug, nombres: g.nombres, cupo: g.cupo, integrantes: String(g.integrantes || '').split(',').map(s => s.trim()).filter(Boolean) } : null;
       },
       async obtenerRsvp({ slug, token }) {
         await espera();
@@ -363,6 +363,7 @@
           const cantidad = asiste === 'si' ? Math.max(1, Math.min(cupo, parseInt(datos.cantidad, 10) || 1)) : 0;
           if (asiste === 'si' && parseInt(datos.cantidad, 10) > cupo) err(`El máximo para esta invitación es ${cupo}`);
           if (!g && !limpiar(datos.nombre_contacto, 120)) err('Contanos tu nombre');
+          if ((datos.canciones || []).length > 2) err('Podés sumar hasta 2 canciones');
           const fila = {
             asiste, cantidad,
             nombre_contacto: limpiar(datos.nombre_contacto, 120),
@@ -509,8 +510,8 @@
           cambiar(d => {
             if (!/^[a-z0-9-]{3,60}$/.test(g.slug)) err('El link solo puede tener minúsculas, números y guiones');
             if (d.grupos.some(x => x.slug === g.slug && x.id !== g.id)) err('Ese link (slug) ya existe');
-            if (g.id) Object.assign(d.grupos.find(x => x.id === g.id), { slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || '' });
-            else d.grupos.push({ id: crypto.randomUUID(), slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || '', creado: new Date().toISOString() });
+            if (g.id) Object.assign(d.grupos.find(x => x.id === g.id), { slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || '', integrantes: g.integrantes || '' });
+            else d.grupos.push({ id: crypto.randomUUID(), slug: g.slug, nombres: g.nombres, cupo: g.cupo, telefono: g.telefono || '', integrantes: g.integrantes || '', creado: new Date().toISOString() });
           });
         },
         async borrarGrupo(id) { exigirAdmin(); cambiar(d => { d.grupos = d.grupos.filter(g => g.id !== id); d.rsvps = d.rsvps.filter(r => r.grupo_id !== id); }); },
