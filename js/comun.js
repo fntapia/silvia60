@@ -48,6 +48,40 @@
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
   }
 
+  // --- Datos del evento: vienen de la base (panel → Evento); config.js es el respaldo ---
+  const ZONA = { timeZone: 'America/Argentina/San_Juan' };
+  const mayus = s => s.charAt(0).toUpperCase() + s.slice(1);
+  function derivarEvento() {
+    const f = new Date(C.fechaEvento);
+    C.fechaTexto = mayus(f.toLocaleDateString('es-AR', Object.assign({ weekday: 'long', day: 'numeric', month: 'long' }, ZONA)).replace(',', ''));
+    C.fechaCorta = mayus(f.toLocaleDateString('es-AR', Object.assign({ weekday: 'short' }, ZONA)).replace('.', '').slice(0, 3)) + ' ' +
+      f.toLocaleDateString('es-AR', Object.assign({ day: 'numeric', month: 'long' }, ZONA));
+    const [hh, mm] = f.toLocaleTimeString('es-AR', Object.assign({ hour: '2-digit', minute: '2-digit', hour12: false }, ZONA)).split(':');
+    C.horaTexto = mm === '00' ? `${+hh} h` : `${hh}:${mm} h`;
+    C.horaInput = `${hh}:${mm}`;
+    C.fotosDesde = new Date(f.getTime() - 2 * 3600e3).toISOString();   // /fotos se habilita 2 h antes
+    C.fechaLimiteTexto = new Date(C.fechaLimiteRsvp).toLocaleDateString('es-AR', Object.assign({ day: 'numeric', month: 'long' }, ZONA));
+  }
+  function aplicarEvento(e) {
+    if (!e) return;
+    if (e.fecha_evento) C.fechaEvento = new Date(e.fecha_evento).toISOString();
+    if (e.texto_puntual) C.textoPuntual = e.texto_puntual;
+    if (e.fecha_limite_rsvp) C.fechaLimiteRsvp = new Date(e.fecha_limite_rsvp).toISOString();
+    derivarEvento();
+  }
+  let eventoListo = null;
+  // Se llama una vez al arrancar cada página. Si la base tarda más de 4 s, sigue con config.js.
+  function cargarEvento() {
+    if (!eventoListo) eventoListo = (async () => {
+      derivarEvento();
+      try {
+        const e = await Promise.race([window.Datos.evento(), new Promise((_, mal) => setTimeout(() => mal(new Error('tiempo')), 4000))]);
+        aplicarEvento(e);
+      } catch (err) { console.warn('Datos del evento desde config.js', err && err.message); }
+    })();
+    return eventoListo;
+  }
+
   // --- Fechas ---
   const fechaEvento = () => new Date(C.fechaEvento);
   function partesRestantes(hasta) {
@@ -331,5 +365,7 @@
 
   function primerNombre(s) { return String(s || '').trim().split(/[\s,]+/)[0] || ''; }
 
-  window.S60 = { $, $$, esc, local, uuid, idDispositivo, toast, url, urlMaps, fechaEvento, partesRestantes, fotosHabilitadas, modoPruebaActivo, rsvpAbierto, urlGoogleCalendar, descargarIcs, descargarArchivo, urlWhatsApp, normalizarTelefono, slugificar, sufijoAleatorio, tieneMalasPalabras, qrSvg, brillos, lluviaDorada, confetiDorado, fiesta, destellos, corazones, cargarImagen, comprimir, bannerDemo, formatoHora, formatoFechaHora, primerNombre };
+  derivarEvento();   // textos de fecha/hora desde config.js hasta que llegue lo de la base
+
+  window.S60 = { $, $$, esc, local, uuid, idDispositivo, toast, url, urlMaps, fechaEvento, partesRestantes, fotosHabilitadas, modoPruebaActivo, cargarEvento, aplicarEvento, derivarEvento, rsvpAbierto, urlGoogleCalendar, descargarIcs, descargarArchivo, urlWhatsApp, normalizarTelefono, slugificar, sufijoAleatorio, tieneMalasPalabras, qrSvg, brillos, lluviaDorada, confetiDorado, fiesta, destellos, corazones, cargarImagen, comprimir, bannerDemo, formatoHora, formatoFechaHora, primerNombre };
 })();

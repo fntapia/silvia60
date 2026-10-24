@@ -31,6 +31,17 @@
     .p-op .forma { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.25); font-size: 1.1rem; }
     .p-op[disabled] { opacity: .35; cursor: default; }
     .p-op.elegida { opacity: 1; box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--c); }
+    /* Verdadero o Falso: dos botones grandes, verde esmeralda y rojo coral con borde dorado */
+    .p-opciones.p-vf { grid-template-columns: 1fr 1fr; gap: 14px; }
+    .p-vf-btn { flex-direction: column; justify-content: center; gap: 6px; min-height: 170px; text-align: center; font-size: 1.3rem; letter-spacing: .03em;
+      background: linear-gradient(160deg, var(--vf), var(--vf2)); box-shadow: 0 8px 18px rgba(0,0,0,.15), 0 0 0 3px #fff, 0 0 0 5px #D4AF37; }
+    .p-vf-btn .vf-icono { font-size: 2.8rem; line-height: 1; }
+    .vf-v { --vf: #0E9F6E; --vf2: #0B7A55; --c: #0E9F6E; }
+    .vf-f { --vf: #FF6B5B; --vf2: #E04A3A; --c: #FF6B5B; }
+    .p-vf-btn.elegida { box-shadow: 0 0 0 4px #fff, 0 0 0 8px #D4AF37; }
+    .r-respuesta { font-weight: 700; margin: .2rem 0; }
+    .r-dato { font-family: var(--fuente-serif); font-size: 1.15rem; font-weight: 700; color: var(--oro-texto); margin: .2rem 0 .6rem; }
+    .r-dato:empty, .r-respuesta:empty { display: none; }
     .puntos-grandes { font-family: var(--fuente-serif); font-size: 3rem; font-weight: 700; color: var(--oro-texto); margin: 0; font-variant-numeric: lining-nums; }
   </style>
 </head>
@@ -80,6 +91,8 @@
       <p class="emoji" id="rEmoji" aria-hidden="true"></p>
       <p class="serif" id="rTitulo"></p>
       <p class="puntos-grandes" id="rPuntos"></p>
+      <p class="r-respuesta" id="rRespuesta"></p>
+      <p class="r-dato" id="rDato"></p>
       <p class="suave" id="rPosicion"></p>
     </section>
 

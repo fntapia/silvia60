@@ -8,7 +8,7 @@
   <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/trivia.css">
   <link rel="stylesheet" href="../css/pantalla.css">
@@ -24,20 +24,11 @@
       <p class="vacio-titulo script oro-brillante">¡Bienvenidos!</p>
       <p class="vacio-texto serif">Sé el primero en subir una foto 📸<br>Escaneá el código y aparece acá al instante.</p>
     </section>
-    <section id="muro" class="muro oculto">
-      <div class="destacada" id="destacada">
-        <figure class="polaroid grande capa" id="capaA"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
-        <figure class="polaroid grande capa" id="capaB"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
-      </div>
-      <div class="mosaico" id="mosaico"></div>
+    <!-- Collage de polaroids: las arma js/pantalla.js -->
+    <section id="collage" class="collage oculto" aria-live="polite">
+      <div class="nueva-fondo" id="nuevaFondo"><p class="serif">✨ ¡Foto nueva! ✨</p></div>
     </section>
   </main>
-
-  <!-- Foto nueva protagonista -->
-  <div class="protagonista oculto" id="protagonista" aria-live="polite">
-    <p class="prota-etiqueta serif">✨ ¡Foto nueva! ✨</p>
-    <figure class="polaroid prota"><div class="marco"><img alt=""></div><figcaption></figcaption></figure>
-  </div>
 
   <!-- Muro en pausa -->
   <div class="pausa oculto" id="pausa">
@@ -60,18 +51,18 @@
   <!-- ============ TRIVIA ============ -->
   <main id="vistaTrivia" class="vista trivia-pantalla oculto">
     <section id="tLobby" class="t-lobby oculto">
-      <p class="eyebrow">Trivia</p>
-      <h1 class="t-titulo serif">¿Cuánto conocés a <span class="script oro-brillante">Silvia</span>?</h1>
-      <div class="t-lobby-qr">
-        <div class="qr-grande" id="qrTrivia"></div>
-        <div>
-          <p class="serif t-lobby-paso">1. Escaneá el código con el celular</p>
-          <p class="serif t-lobby-paso">2. Elegí tu apodo</p>
-          <p class="serif t-lobby-paso">3. ¡Respondé rápido para sumar más puntos!</p>
+      <h1 class="t-titulo serif">🏆 ¿Quién conoce más a <span class="script oro-brillante">Silvia</span>?</h1>
+      <p class="t-premio serif">¡Hay premio para el ganador! 🎁 <span>Escaneá el QR y sumate</span></p>
+      <div class="t-lobby-cuerpo">
+        <div class="t-lobby-qr">
+          <div class="qr-grande" id="qrTrivia"></div>
+          <p class="t-jugadores">👥 <b id="tCantJug">0</b> <span id="tJugTxt">jugando</span></p>
           <p class="t-link" id="linkTrivia"></p>
         </div>
+        <div class="burbujas" id="burbujas" aria-live="polite">
+          <p class="burbujas-vacio serif" id="burbujasVacio">Los apodos aparecen acá a medida que se suman ✨</p>
+        </div>
       </div>
-      <p class="t-jugadores"><b id="tCantJug">0</b> jugadores listos</p>
     </section>
 
     <section id="tPregunta" class="t-pregunta oculto">
@@ -88,6 +79,7 @@
     <section id="tResultado" class="t-resultado oculto">
       <p class="t-num" id="trNum"></p>
       <h1 class="t-texto chico serif" id="trTexto"></h1>
+      <p class="t-dato serif oculto" id="trDato"></p>
       <div class="t-res-grid">
         <div class="barras" id="barras"></div>
         <div class="top5">
@@ -112,7 +104,8 @@
   <aside class="esquina-qr" id="esquinaQr">
     <div class="qr" id="qrFotos"></div>
     <div>
-      <p class="esquina-titulo serif">¡Subí tus fotos! 📸</p>
+      <p class="esquina-eyebrow">Aparece acá al instante</p>
+      <p class="esquina-titulo serif"><span class="oro-txt">¡Subí tu foto!</span> 📸</p>
       <p class="esquina-link" id="linkFotos"></p>
     </div>
   </aside>

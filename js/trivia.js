@@ -63,7 +63,10 @@
     ver('vPregunta');
     $('#pNum').textContent = `Pregunta ${p.num} de ${p.total}`;
     $('#pTexto').textContent = p.texto;
-    $('#pOpciones').innerHTML = p.opciones.map((o, i) => `<button type="button" class="p-op op op${i}" data-i="${i}"><span class="forma"></span><span>${esc(o)}</span></button>`).join('');
+    $('#pOpciones').className = 'p-opciones' + (p.tipo === 'vf' ? ' p-vf' : '');
+    $('#pOpciones').innerHTML = p.tipo === 'vf'
+      ? [0, 1].map(i => `<button type="button" class="p-op p-vf-btn ${i ? 'vf-f' : 'vf-v'}" data-i="${i}"><span class="vf-icono">${i ? '❌' : '✅'}</span><span>${i ? 'FALSO' : 'VERDADERO'}</span></button>`).join('')
+      : p.opciones.map((o, i) => `<button type="button" class="p-op op op${i}" data-i="${i}"><span class="forma"></span><span>${esc(o)}</span></button>`).join('');
     $('#pOpciones').querySelectorAll('.p-op').forEach(b => b.addEventListener('click', () => responder(p, +b.dataset.i, b)));
     esperarFin();
 
@@ -94,13 +97,24 @@
     }
   }
 
-  function resultado(m) {
+  // Festejo: confeti solo si acertó (una vez por pregunta). También muestra la respuesta y el dato.
+  let festejada = null;
+  async function resultado(m) {
     ver('vResultado');
     const u = m && m.ultima;
-    if (u && u.correcta) { $('#rEmoji').textContent = '🎉'; $('#rTitulo').textContent = '¡Correcto!'; $('#rPuntos').textContent = '+' + u.puntos; }
-    else if (u) { $('#rEmoji').textContent = '🙈'; $('#rTitulo').textContent = '¡Uy, no era esa!'; $('#rPuntos').textContent = '+0'; }
+    if (u && u.correcta) { $('#rEmoji').textContent = '🎉'; $('#rTitulo').textContent = '¡Correcto! 🎉'; $('#rPuntos').textContent = '+' + u.puntos + ' puntos'; }
+    else if (u) { $('#rEmoji').textContent = '😅'; $('#rTitulo').textContent = '¡Uy! 😅'; $('#rPuntos').textContent = '+0'; }
     else { $('#rEmoji').textContent = '⏰'; $('#rTitulo').textContent = 'No llegaste a responder'; $('#rPuntos').textContent = ''; }
     $('#rPosicion').textContent = m ? `Vas en el puesto ${m.posicion} de ${m.jugadores} con ${m.puntos} puntos` : '';
+    $('#rRespuesta').textContent = ''; $('#rDato').textContent = '';
+    let p = null;
+    try { p = await Datos.trivia.preguntaActual(); } catch (e) {}
+    if (p && p.id && p.correcta != null) {
+      $('#rRespuesta').textContent = 'Era: ' + (p.tipo === 'vf' ? (p.correcta ? 'FALSO ❌' : 'VERDADERO ✅') : p.opciones[p.correcta]);
+      $('#rDato').textContent = p.dato ? '💡 ' + p.dato : '';
+    }
+    const id = (p && p.id) || estado.pregunta_id;
+    if (u && u.correcta && festejada !== id) { festejada = id; S60.fiesta(2200); }
   }
 
   $('#vUnirse').addEventListener('submit', async e => {

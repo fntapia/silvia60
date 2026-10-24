@@ -108,7 +108,17 @@ body.con-demo .progreso { top: 20px; }
 .portada { flex-direction: column; justify-content: center; padding: 84px 0 calc(22px + env(safe-area-inset-bottom)); background: #fff; }
 .portada-fecha { display: inline-flex; align-items: center; gap: .55rem; margin: 1rem 0 0; padding: .55rem 1.2rem; border-radius: 999px;
   background: #1A1A1A; color: #FFF3C4; font-weight: 700; font-size: .92rem; letter-spacing: .04em; box-shadow: 0 10px 22px rgba(0, 0, 0, .18), inset 0 0 0 1px rgba(245, 217, 122, .45); opacity: 0; }
+.portada-fecha { flex-wrap: wrap; justify-content: center; max-width: calc(100% - 8px); gap: .4rem; padding: .55rem 1rem; font-size: .9rem; }
 .portada-fecha i { font-style: normal; color: var(--oro-claro); }
+.portada-fecha span, .portada-fecha b { white-space: nowrap; }
+/* en celular entra en una sola línea */
+@media (max-width: 430px) { .portada-fecha { font-size: .8rem; gap: .32rem; padding: .6rem .95rem; letter-spacing: -.005em; } }
+.portada-fecha b { color: var(--oro-claro); font-weight: 800; }
+/* Puntualidad bien visible en la pantalla de fecha */
+.puntual-destacado { display: inline-flex; align-items: center; gap: .5rem; margin: .6rem 0 1.2rem; padding: .7rem 1.3rem; border-radius: 999px;
+  background: var(--grad-oro); background-size: 200% 100%; color: var(--tinta); font-weight: 800; font-size: 1.12rem;
+  box-shadow: 0 8px 20px rgba(184, 134, 11, .35); animation: foil 5s ease-in-out infinite, latir-suave 2.4s ease-in-out infinite; }
+@keyframes latir-suave { 50% { transform: scale(1.04); } }
 body.abierta .portada-fecha { animation: aparece .8s ease 1.6s forwards; }
 .portada .halo { position: absolute; left: 50%; top: 4%; width: 135vw; max-width: 760px; aspect-ratio: 1; transform: translateX(-50%); z-index: 0;
   background: radial-gradient(circle, rgba(255, 224, 130, .75) 0%, rgba(255, 236, 175, .45) 32%, rgba(255, 255, 255, 0) 64%); }

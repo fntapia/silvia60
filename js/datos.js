@@ -97,6 +97,13 @@
       },
       escucharFotos: (cb, alEstado) => escucharTabla('fotos', ev => cb({ tipo: ev.tipo, foto: ev.fila && ev.fila.ruta ? fotoPublica(ev.fila) : ev.fila }), alEstado),
       mensajesPantalla: () => rpc('mensajes_pantalla'),
+      // Fecha, hora, puntualidad y límite para confirmar (se editan en el panel → Evento)
+      async evento() {
+        const s = await db();
+        const { data, error } = await s.from('evento_config').select('*').eq('id', 1).maybeSingle();
+        if (error) throw traducirError(error);
+        return data;
+      },
       async pantalla() {
         const s = await db();
         const { data, error } = await s.from('pantalla_estado').select('*').eq('id', 1).single();
@@ -118,7 +125,8 @@
         resultados: () => rpc('trivia_resultados'),
         ranking: n => rpc('trivia_ranking', { p_n: n || 5 }),
         miEstado: token => rpc('trivia_mi_estado', { p_token: token }),
-        cantidadJugadores: () => rpc('trivia_cantidad')
+        cantidadJugadores: () => rpc('trivia_cantidad'),
+        apodos: () => rpc('trivia_apodos')
       },
       admin: {
         async login(email, clave) {
@@ -194,6 +202,11 @@
           const { error } = await s.from('pantalla_estado').update(cambios).eq('id', 1);
           if (error) throw traducirError(error);
         },
+        async guardarEvento(cambios) {
+          const s = await db();
+          const { error } = await s.from('evento_config').update(Object.assign({}, cambios, { actualizado: new Date().toISOString() })).eq('id', 1);
+          if (error) throw new Error(/evento_config/.test(error.message) ? 'Falta correr supabase/actualizacion-3.sql en Supabase' : error.message);
+        },
         // Borra archivos de fotos (pub/, orig/, rev/) y después confirmaciones, filas de fotos y trivia.
         // No toca invitados ni preguntas de la trivia (ni sus imágenes en trivia/).
         async borrarDatosPrueba(alProgreso) {
@@ -222,7 +235,7 @@
         },
         async guardarPregunta(p) {
           const s = await db();
-          const fila = { orden: p.orden, texto: p.texto, opciones: p.opciones, correcta: p.correcta, imagen: p.imagen || null, activa: p.activa !== false };
+          const fila = { orden: p.orden, tipo: p.tipo || 'multiple', texto: p.texto, opciones: p.opciones, correcta: p.correcta, dato: p.dato || null, imagen: p.imagen || null, activa: p.activa !== false };
           const { error } = p.id ? await s.from('trivia_preguntas').update(fila).eq('id', p.id) : await s.from('trivia_preguntas').insert(fila);
           if (error) throw traducirError(error);
         },
@@ -252,7 +265,8 @@
 
     function semilla() {
       const ahora = new Date().toISOString();
-      const p = (orden, texto, opciones, correcta) => ({ id: crypto.randomUUID(), orden, texto, opciones, correcta, imagen: null, activa: true, creado: ahora });
+      const p = (orden, texto, opciones, correcta, dato) => ({ id: crypto.randomUUID(), orden, tipo: 'multiple', texto, opciones, correcta, dato: dato || null, imagen: null, activa: true, creado: ahora });
+      const vf = (orden, texto, verdadero, dato) => Object.assign(p(orden, texto, ['Verdadero', 'Falso'], verdadero ? 0 : 1, dato), { tipo: 'vf' });
       return {
         grupos: [
           { id: crypto.randomUUID(), slug: 'familia-gomez', nombres: 'Familia Gómez', cupo: 4, telefono: '2645123456', integrantes: 'Marta, Carlos, Sofi, Juan', creado: ahora },
@@ -260,12 +274,22 @@
         ],
         rsvps: [], fotos: [],
         pantalla: { id: 1, muro_pausado: false, modo: 'fotos', mensaje_manual: '', mensaje_ts: null, modo_prueba: false },
+        evento: { id: 1, fecha_evento: C.fechaEvento, texto_puntual: C.textoPuntual, fecha_limite_rsvp: C.fechaLimiteRsvp },
         trivia_preguntas: [
-          p(1, '¿En qué año nació Silvia?', ['1964', '1966', '1968', '1970'], 1),
-          p(2, '¿Cuál es la comida favorita de Silvia?', ['Empanadas', 'Asado', 'Pastas', 'Pizza'], 2),
-          p(3, '¿Cuál es la canción favorita de Silvia?', ['Bailando', 'La bilirrubina', 'Color esperanza', 'Muchachos'], 0),
-          p(4, '¿Cómo le decían a Silvia de chica?', ['Silvi', 'Chivi', 'Sisi', 'Negrita'], 1),
-          p(5, '¿En qué ciudad nació Silvia?', ['San Juan', 'Mendoza', 'Córdoba', 'Buenos Aires'], 0)
+          // las mismas 13 de supabase/actualizacion-3.sql
+          p(1, '🎂 ¿En qué año nació Silvia?', ['1964', '1966', '1967', '1969'], 1),
+          p(2, '🎬 ¿Cuál es su película favorita?', ['Esperando la carroza', 'La propuesta', 'La boda de mi mejor amigo', 'Diario de una pasión'], 1),
+          p(3, '👩‍🏫 Si no hubiera sido docente, ¿qué le habría gustado ser?', ['Psicóloga 🧠', 'Abogada ⚖️', 'Astronauta 🚀', 'Contadora 📊'], 1),
+          vf(4, '🚌 A los 5 años la atropelló un colectivo… ¡y salió ilesa!', true, '¡Así de fuerte es Silvia! 💪'),
+          vf(5, '🎤 En la secundaria fue la cantante de la banda de sus compañeros de la ECLGS.', false),
+          p(6, '🎸 ¿Cuál fue el primer recital al que fue?', ['Pedro y Pablo (1982)', 'Charly García (1984)', 'Miguel Mateos/Zas (1985)', 'Shakira (2025) 😂'], 0),
+          p(7, '📻 El día que nació Silvia, ¿qué canción era la n.º 1 en las radios argentinas?', ['Strangers in the Night – Frank Sinatra', 'Yellow Submarine – The Beatles 🟡', 'Satisfaction – The Rolling Stones', 'Despacito – Luis Fonsi 😂'], 1),
+          p(8, '🌍 Si pudiera festejar su cumpleaños en cualquier lugar del mundo, ¿dónde sería?', ['En París 🗼', 'En el Caribe 🏝️', 'En Nueva York 🗽', 'En San Juan, con su familia y amigos ❤️'], 3),
+          vf(9, '🐱 Olivia, la reina de la casa, es una gata.', false, '¡Olivia es una caniche! 🐩'),
+          p(10, '📺 ¿Cuál era el dibujito "sagrado" de su infancia, el que no se perdía por nada?', ['Heidi 🏔️', 'Tom y Jerry 🐱🐭', 'El Pájaro Loco 🐦', 'El Correcaminos 💨'], 1),
+          p(11, '🤫 ¿Cuántos años cumple Silvia?', ['29 (otra vez) 😉', '39 y pico 🤭', '60 y divina ✨', 'Una dama no dice su edad 🤐'], 2),
+          p(12, '⏳ ¿Cuántos días de vida lleva Silvia, más o menos?', ['Unos 8.500', 'Unos 15.000', 'Unos 21.900', 'Unos 30.000'], 2, '¡Más de 21.900 días! Y todos llenos de amor 💛'),
+          vf(13, '❤️ Esta noche Silvia está rodeada de la gente que más quiere.', true, '¡Gracias por estar! 💛🥂')
         ],
         trivia_estado: { id: 1, partida: null, fase: 'apagada', pregunta_id: null, pregunta_num: 0, total: 0, inicio: null, duracion: C.trivia.segundos },
         trivia_jugadores: [], trivia_respuestas: []
@@ -431,6 +455,7 @@
         });
       },
       async pantalla() { return leer().pantalla; },
+      async evento() { return leer().evento || null; },
       escucharPantalla(cb, alEstado) { setTimeout(() => alEstado && alEstado(true), 50); return oyente('pantalla_estado', ev => cb(ev.fila)); },
       trivia: {
         async estado() { return leer().trivia_estado; },
@@ -441,8 +466,8 @@
           if (!p || !['pregunta', 'resultado', 'ranking'].includes(e.fase)) return { fase: e.fase, partida: e.partida, total: e.total, ahora: new Date().toISOString() };
           const terminado = e.fase !== 'pregunta' || tiempoTerminado(e);
           return {
-            fase: e.fase, partida: e.partida, id: p.id, num: e.pregunta_num, total: e.total, texto: p.texto, opciones: p.opciones, imagen: p.imagen,
-            duracion: e.duracion, inicio: e.inicio, ahora: new Date().toISOString(), correcta: terminado ? p.correcta : null
+            fase: e.fase, partida: e.partida, id: p.id, num: e.pregunta_num, total: e.total, tipo: p.tipo || 'multiple', texto: p.texto, opciones: p.opciones, imagen: p.imagen,
+            duracion: e.duracion, inicio: e.inicio, ahora: new Date().toISOString(), correcta: terminado ? p.correcta : null, dato: terminado ? (p.dato || null) : null
           };
         },
         async unirse(apodo) {
@@ -471,6 +496,7 @@
             if (ms > e.duracion * 1000 + 1000) err('¡Se terminó el tiempo!');
             if (d.trivia_respuestas.some(r => r.jugador_id === j.id && r.pregunta_id === preguntaId)) err('Ya respondiste esta pregunta');
             const p = d.trivia_preguntas.find(x => x.id === preguntaId);
+            if (!(opcion >= 0 && opcion < p.opciones.length)) err('Opción inválida');
             const correcta = p.correcta === opcion;
             const puntos = puntosPorRespuesta(correcta, ms, e.duracion);
             d.trivia_respuestas.push({ jugador_id: j.id, pregunta_id: preguntaId, partida: e.partida, opcion, correcta, puntos, ms });
@@ -487,7 +513,7 @@
           if (e.fase === 'pregunta' && !tiempoTerminado(e)) return { respondieron: rs.length, correcta: null };
           const conteos = [0, 0, 0, 0];
           rs.forEach(r => conteos[r.opcion]++);
-          return { correcta: p.correcta, conteos, respondieron: rs.length };
+          return { correcta: p.correcta, conteos, respondieron: rs.length, tipo: p.tipo || 'multiple', dato: p.dato || null };
         },
         async ranking(n) { return ranking(leer(), n || 5); },
         async miEstado(token) {
@@ -498,7 +524,8 @@
           const ult = d.trivia_respuestas.find(r => r.jugador_id === j.id && r.pregunta_id === e.pregunta_id);
           return { apodo: j.apodo, puntos: j.puntos, posicion: todos.indexOf(j) + 1, jugadores: todos.length, ultima: ult ? { correcta: ult.correcta, puntos: ult.puntos, opcion: ult.opcion } : null };
         },
-        async cantidadJugadores() { const d = leer(); return d.trivia_jugadores.filter(j => j.partida === d.trivia_estado.partida).length; }
+        async cantidadJugadores() { const d = leer(); return d.trivia_jugadores.filter(j => j.partida === d.trivia_estado.partida).length; },
+        async apodos() { const d = leer(); return d.trivia_jugadores.filter(j => j.partida === d.trivia_estado.partida).slice(-60).map(j => j.apodo); }
       },
       admin: {
         async login(email, clave) { await espera(300); if (clave !== 'demo') err('En modo demo la contraseña es: demo'); S60.local.guardar('demo_admin', { email }); },
@@ -548,6 +575,10 @@
           const p = cambiar(d => Object.assign(d.pantalla, cambios));
           avisar({ tabla: 'pantalla_estado', tipo: 'UPDATE', fila: p });
         },
+        async guardarEvento(cambios) {
+          exigirAdmin();
+          cambiar(d => { d.evento = Object.assign(d.evento || {}, cambios); });
+        },
         async borrarDatosPrueba() {
           exigirAdmin();
           const r = cambiar(d => {
@@ -565,7 +596,7 @@
         async guardarPregunta(p) {
           exigirAdmin();
           cambiar(d => {
-            const fila = { orden: p.orden, texto: p.texto, opciones: p.opciones, correcta: p.correcta, imagen: p.imagen || null, activa: p.activa !== false };
+            const fila = { orden: p.orden, tipo: p.tipo || 'multiple', texto: p.texto, opciones: p.opciones, correcta: p.correcta, dato: p.dato || null, imagen: p.imagen || null, activa: p.activa !== false };
             if (p.id) Object.assign(d.trivia_preguntas.find(x => x.id === p.id), fila);
             else d.trivia_preguntas.push(Object.assign({ id: crypto.randomUUID(), creado: new Date().toISOString() }, fila));
           });

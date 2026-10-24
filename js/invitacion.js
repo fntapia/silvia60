@@ -1,5 +1,8 @@
 /* Invitación tipo historia + RSVP */
-(function () {
+// Primero traemos fecha/hora/puntualidad de la base (panel → Evento); si no responde, usa config.js
+// Si tocan el sobre antes de que termine de cargar, lo abrimos apenas esté listo
+document.getElementById('sobre').addEventListener('click', () => { window.__abrirSobre = true; }, { once: true });
+S60.cargarEvento().then(function () {
   const C = window.CONFIG;
   const { $, $$, esc, local, toast } = S60;
 
@@ -34,7 +37,7 @@
   $('#nombreHomenajeada').innerHTML = Array.from(C.homenajeada).map((l, i) => `<span style="--i:${i}">${esc(l)}</span>`).join('');
   $('#nombreHomenajeada').setAttribute('aria-label', C.homenajeada);
   $('#fechaTexto').textContent = C.fechaTexto;
-  $('#portadaFecha').textContent = C.fechaTexto;
+  $('#portadaFecha').textContent = C.fechaCorta;
   const zona = { timeZone: 'America/Argentina/San_Juan' };
   $('#calMes').textContent = S60.fechaEvento().toLocaleDateString('es-AR', Object.assign({ month: 'short' }, zona)).replace('.', '').slice(0, 3).toUpperCase();
   $('#calDia').textContent = S60.fechaEvento().toLocaleDateString('es-AR', Object.assign({ day: 'numeric' }, zona));
@@ -104,6 +107,7 @@
     setTimeout(() => apertura.remove(), 2000);
   }
   $('#sobre').addEventListener('click', abrir);
+  if (window.__abrirSobre) abrir();
   apertura.addEventListener('click', e => { if (!e.target.closest('#sobre')) abrir(); });
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) $('#sobre').addEventListener('click', () => { apertura.remove(); document.body.classList.add('abierta'); });
 
@@ -344,4 +348,4 @@
     if (rsvpActual) mostrarResumen(rsvpActual);
     else { llenarForm(null); mostrarForm(); }
   })();
-})();
+});

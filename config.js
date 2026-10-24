@@ -14,11 +14,11 @@ window.CONFIG = {
   },
 
   // --- Fecha y hora (hora de Argentina, -03:00) ---
+  // ⚠️ Ahora se cambian desde el PANEL → pestaña "Evento" (se aplica al instante).
+  //    Lo de acá es solo el RESPALDO por si la base no responde. Los textos ("Sábado 5 de diciembre", "22 h") se arman solos.
   fechaEvento: '2026-12-05T22:30:00-03:00',
   duracionHoras: 5,                      // para el evento del calendario
-  fechaTexto: 'Sábado 5 de diciembre',
-  horaTexto: '22:30 h',
-  textoPuntual: '¡Te esperamos puntual!',
+  textoPuntual: '¡Por favor, sé puntual!',
 
   // --- Lugar ---
   lugar: {
@@ -29,12 +29,10 @@ window.CONFIG = {
   // Pegá acá el link exacto del pin de Google Maps (si queda vacío, se busca la dirección)
   mapsUrl: 'https://maps.app.goo.gl/Y4UzwntUFD6N6WxSA',   // pin exacto del Salón de Fer
 
-  // --- Confirmaciones ---
+  // --- Confirmaciones (respaldo: también se edita en el panel → Evento) ---
   fechaLimiteRsvp: '2026-11-20T23:59:59-03:00',
-  fechaLimiteTexto: '20 de noviembre',
 
-  // --- Fotos ---
-  fotosDesde: '2026-12-05T20:00:00-03:00',   // desde cuándo se habilita "Subir fotos"
+  // --- Fotos ("Subir fotos" se habilita solo, 2 horas antes del evento) ---
   fotos: {
     ladoMax: 1600,          // px del lado mayor de la foto que se muestra en pantalla
     calidad: 0.8,           // calidad JPEG (0 a 1)

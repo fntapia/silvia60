@@ -10,8 +10,20 @@ create extension if not exists pgcrypto;
 -- ---------------------------------------------------------------------
 -- Ajustes (cambiá acá si cambia la fecha límite para confirmar)
 -- ---------------------------------------------------------------------
+-- Datos del evento (se editan desde el panel → Evento; config.js queda de respaldo)
+create table if not exists public.evento_config (
+  id int primary key default 1 check (id = 1),
+  fecha_evento timestamptz not null default '2026-12-05 22:30:00-03',
+  texto_puntual text not null default '¡Por favor, sé puntual!',
+  fecha_limite_rsvp timestamptz not null default '2026-11-20 23:59:59-03',
+  actualizado timestamptz not null default now()
+);
+insert into public.evento_config (id) values (1) on conflict do nothing;
+
 create or replace function public.rsvp_limite() returns timestamptz
-language sql immutable as $$ select '2026-11-20 23:59:59-03'::timestamptz $$;
+language sql stable security definer set search_path = public as $$
+  select coalesce((select fecha_limite_rsvp from evento_config where id = 1), '2026-11-20 23:59:59-03'::timestamptz);
+$$;
 
 create or replace function public.espacio_originales_bytes() returns bigint
 language sql immutable as $$ select 800::bigint * 1024 * 1024 $$;
@@ -92,11 +104,18 @@ create table if not exists public.trivia_preguntas (
   id uuid primary key default gen_random_uuid(),
   orden int not null default 1,
   texto text not null check (char_length(texto) between 1 and 200),
-  opciones jsonb not null check (jsonb_typeof(opciones) = 'array' and jsonb_array_length(opciones) = 4),
-  correcta int not null check (correcta between 0 and 3),
+  tipo text not null default 'multiple',          -- 'multiple' (2 a 4 opciones) o 'vf' (Verdadero, Falso)
+  opciones jsonb not null,
+  correcta int not null,
+  dato text,                                       -- se muestra al revelar la respuesta (opcional)
   imagen text,
   activa boolean not null default true,
-  creado timestamptz not null default now()
+  creado timestamptz not null default now(),
+  constraint trivia_preguntas_formato_ok check (
+    tipo in ('multiple', 'vf') and jsonb_typeof(opciones) = 'array' and jsonb_array_length(opciones) between 2 and 4
+    and (tipo <> 'vf' or jsonb_array_length(opciones) = 2)
+    and correcta >= 0 and correcta < jsonb_array_length(opciones)
+    and (dato is null or char_length(dato) <= 160))
 );
 
 create table if not exists public.trivia_estado (
@@ -146,11 +165,12 @@ alter table public.trivia_preguntas enable row level security;
 alter table public.trivia_estado enable row level security;
 alter table public.trivia_jugadores enable row level security;
 alter table public.trivia_respuestas enable row level security;
+alter table public.evento_config enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['grupos', 'rsvps', 'fotos', 'pantalla_estado', 'trivia_preguntas', 'trivia_estado', 'trivia_jugadores', 'trivia_respuestas'] loop
+  foreach t in array array['grupos', 'rsvps', 'fotos', 'pantalla_estado', 'trivia_preguntas', 'trivia_estado', 'trivia_jugadores', 'trivia_respuestas', 'evento_config'] loop
     execute format('drop policy if exists "admin_todo" on public.%I', t);
     execute format('create policy "admin_todo" on public.%I for all to authenticated using (public.es_admin()) with check (public.es_admin())', t);
   end loop;
@@ -166,9 +186,12 @@ create policy "publico_pantalla" on public.pantalla_estado for select to anon, a
 drop policy if exists "publico_trivia_estado" on public.trivia_estado;
 create policy "publico_trivia_estado" on public.trivia_estado for select to anon, authenticated using (true);
 
+drop policy if exists "publico_evento" on public.evento_config;
+create policy "publico_evento" on public.evento_config for select to anon, authenticated using (true);
+
 -- Permisos de tabla (los proyectos nuevos de Supabase no los dan solos). La seguridad fina la ponen las reglas RLS de arriba.
 grant usage on schema public to anon, authenticated;
-grant select on public.fotos, public.pantalla_estado, public.trivia_estado to anon;
+grant select on public.fotos, public.pantalla_estado, public.trivia_estado, public.evento_config to anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;   -- RLS: solo el admin pasa
 
 -- Los invitados nunca escriben directo en las tablas (ni tienen permisos que no hacen falta)
@@ -315,8 +338,8 @@ begin
   end if;
   v_fin := e.fase <> 'pregunta' or now() > e.inicio + make_interval(secs => e.duracion);
   return json_build_object('fase', e.fase, 'partida', e.partida, 'id', q.id, 'num', e.pregunta_num, 'total', e.total,
-    'texto', q.texto, 'opciones', q.opciones, 'imagen', q.imagen, 'duracion', e.duracion, 'inicio', e.inicio, 'ahora', now(),
-    'correcta', case when v_fin then q.correcta end);
+    'tipo', q.tipo, 'texto', q.texto, 'opciones', q.opciones, 'imagen', q.imagen, 'duracion', e.duracion, 'inicio', e.inicio, 'ahora', now(),
+    'correcta', case when v_fin then q.correcta end, 'dato', case when v_fin then q.dato end);
 end $$;
 
 create or replace function public.trivia_unirse(p_apodo text) returns json
@@ -343,10 +366,10 @@ begin
   select * into j from trivia_jugadores where token = p_token and partida = e.partida;
   if j.id is null then raise exception 'Tenés que volver a entrar con tu apodo'; end if;
   if e.fase <> 'pregunta' or e.pregunta_id is distinct from p_pregunta then raise exception 'Esa pregunta ya cerró'; end if;
-  if p_opcion not between 0 and 3 then raise exception 'Opción inválida'; end if;
+  select * into q from trivia_preguntas where id = p_pregunta;
+  if p_opcion is null or p_opcion < 0 or p_opcion >= jsonb_array_length(q.opciones) then raise exception 'Opción inválida'; end if;
   v_ms := (extract(epoch from (now() - e.inicio)) * 1000)::int;
   if v_ms > e.duracion * 1000 + 1000 then raise exception '¡Se terminó el tiempo!'; end if;
-  select * into q from trivia_preguntas where id = p_pregunta;
   v_ok := q.correcta = p_opcion;
   v_pts := case when v_ok then round(500 + 500 * (1 - least(1, greatest(0, v_ms::numeric / (e.duracion * 1000)))))::int else 0 end;
   begin
@@ -372,7 +395,7 @@ begin
   end if;
   select json_build_array(count(*) filter (where opcion = 0), count(*) filter (where opcion = 1), count(*) filter (where opcion = 2), count(*) filter (where opcion = 3))
     into v_conteos from trivia_respuestas where pregunta_id = q.id and partida = e.partida;
-  return json_build_object('correcta', q.correcta, 'conteos', v_conteos, 'respondieron', v_resp);
+  return json_build_object('correcta', q.correcta, 'conteos', v_conteos, 'respondieron', v_resp, 'tipo', q.tipo, 'dato', q.dato);
 end $$;
 
 create or replace function public.trivia_ranking(p_n int) returns json
@@ -401,6 +424,16 @@ create or replace function public.trivia_cantidad() returns int
 language sql stable security definer set search_path = public as $$
   select count(*)::int from trivia_jugadores where partida = (select partida from trivia_estado where id = 1);
 $$;
+
+-- Apodos de los que se van sumando (para las burbujas de la pantalla de inicio)
+create or replace function public.trivia_apodos() returns json
+language sql stable security definer set search_path = public as $$
+  select coalesce(json_agg(apodo order by creado), '[]'::json)
+  from (select apodo, creado from trivia_jugadores
+        where partida = (select partida from trivia_estado where id = 1)
+        order by creado desc limit 60) x;
+$$;
+grant execute on function public.trivia_apodos() to anon, authenticated;
 
 -- Borrar datos de prueba (solo admin): confirmaciones, fotos y trivia. NO toca invitados ni preguntas.
 create or replace function public.borrar_datos_prueba() returns json
@@ -484,16 +517,24 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- Preguntas de ejemplo (editalas desde el panel)
+-- Preguntas de la trivia (editalas desde el panel)
 -- ---------------------------------------------------------------------
-insert into public.trivia_preguntas (orden, texto, opciones, correcta)
-select * from (values
-  (1, '¿En qué año nació Silvia?', '["1964", "1966", "1968", "1970"]'::jsonb, 1),
-  (2, '¿Cuál es la comida favorita de Silvia?', '["Empanadas", "Asado", "Pastas", "Pizza"]'::jsonb, 2),
-  (3, '¿Cuál es la canción favorita de Silvia?', '["Bailando", "La bilirrubina", "Color esperanza", "Muchachos"]'::jsonb, 0),
-  (4, '¿Cómo le decían a Silvia de chica?', '["Silvi", "Chivi", "Sisi", "Negrita"]'::jsonb, 1),
-  (5, '¿En qué ciudad nació Silvia?', '["San Juan", "Mendoza", "Córdoba", "Buenos Aires"]'::jsonb, 0)
-) as v(orden, texto, opciones, correcta)
+insert into public.trivia_preguntas (orden, tipo, texto, opciones, correcta, dato)
+select orden, tipo, texto, opciones::jsonb, correcta, dato from (values
+(1, 'multiple', '🎂 ¿En qué año nació Silvia?', '["1964", "1966", "1967", "1969"]', 1, null),
+      (2, 'multiple', '🎬 ¿Cuál es su película favorita?', '["Esperando la carroza", "La propuesta", "La boda de mi mejor amigo", "Diario de una pasión"]', 1, null),
+      (3, 'multiple', '👩‍🏫 Si no hubiera sido docente, ¿qué le habría gustado ser?', '["Psicóloga 🧠", "Abogada ⚖️", "Astronauta 🚀", "Contadora 📊"]', 1, null),
+      (4, 'vf', '🚌 A los 5 años la atropelló un colectivo… ¡y salió ilesa!', '["Verdadero", "Falso"]', 0, '¡Así de fuerte es Silvia! 💪'),
+      (5, 'vf', '🎤 En la secundaria fue la cantante de la banda de sus compañeros de la ECLGS.', '["Verdadero", "Falso"]', 1, null),
+      (6, 'multiple', '🎸 ¿Cuál fue el primer recital al que fue?', '["Pedro y Pablo (1982)", "Charly García (1984)", "Miguel Mateos/Zas (1985)", "Shakira (2025) 😂"]', 0, null),
+      (7, 'multiple', '📻 El día que nació Silvia, ¿qué canción era la n.º 1 en las radios argentinas?', '["Strangers in the Night – Frank Sinatra", "Yellow Submarine – The Beatles 🟡", "Satisfaction – The Rolling Stones", "Despacito – Luis Fonsi 😂"]', 1, null),
+      (8, 'multiple', '🌍 Si pudiera festejar su cumpleaños en cualquier lugar del mundo, ¿dónde sería?', '["En París 🗼", "En el Caribe 🏝️", "En Nueva York 🗽", "En San Juan, con su familia y amigos ❤️"]', 3, null),
+      (9, 'vf', '🐱 Olivia, la reina de la casa, es una gata.', '["Verdadero", "Falso"]', 1, '¡Olivia es una caniche! 🐩'),
+      (10, 'multiple', '📺 ¿Cuál era el dibujito "sagrado" de su infancia, el que no se perdía por nada?', '["Heidi 🏔️", "Tom y Jerry 🐱🐭", "El Pájaro Loco 🐦", "El Correcaminos 💨"]', 1, null),
+      (11, 'multiple', '🤫 ¿Cuántos años cumple Silvia?', '["29 (otra vez) 😉", "39 y pico 🤭", "60 y divina ✨", "Una dama no dice su edad 🤐"]', 2, null),
+      (12, 'multiple', '⏳ ¿Cuántos días de vida lleva Silvia, más o menos?', '["Unos 8.500", "Unos 15.000", "Unos 21.900", "Unos 30.000"]', 2, '¡Más de 21.900 días! Y todos llenos de amor 💛'),
+      (13, 'vf', '❤️ Esta noche Silvia está rodeada de la gente que más quiere.', '["Verdadero", "Falso"]', 0, '¡Gracias por estar! 💛🥂')
+) as v(orden, tipo, texto, opciones, correcta, dato)
 where not exists (select 1 from public.trivia_preguntas);
 
 -- ¡Listo! Si ves "Success. No rows returned", salió todo bien.

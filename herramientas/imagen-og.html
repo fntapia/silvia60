@@ -89,7 +89,9 @@
     x.restore();
     estrella(cx - 130, 268, 13); estrella(cx + 138, 300, 9);
     // Fecha en una píldora negra con letras doradas
-    const fecha = `${C.fechaTexto}  ✦  ${C.horaTexto}`;
+    // Sin la hora: así no hay que regenerar la imagen si el salón cambia el horario
+    const dia = new Date(C.fechaEvento).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/San_Juan' }).replace(',', '');
+    const fecha = `✦  ${dia.charAt(0).toUpperCase() + dia.slice(1)}  ✦`;
     x.font = '700 26px Montserrat';
     const fw = x.measureText(fecha).width + 60, fx0 = cx - fw / 2;
     x.save(); x.shadowColor = 'rgba(0,0,0,.25)'; x.shadowBlur = 18; x.shadowOffsetY = 8;

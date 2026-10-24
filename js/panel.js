@@ -52,16 +52,29 @@
 
   /* ---------- Pestañas ---------- */
   let tabActual = 'invitados';
+  const TITULOS = { invitados: 'Invitados', confirmaciones: 'Confirmados', fotos: 'Fotos', pantalla: 'Pantalla', trivia: 'Trivia', evento: 'Evento' };
   function abrirTab(t) {
+    if (t === 'playlist' || t === 'mensajes') t = 'confirmaciones';   // links viejos
     if (!$('#tab-' + t)) t = 'invitados';
     tabActual = t;
     $$('#pestanas button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
     $$('.tab').forEach(s => s.classList.toggle('oculto', s.id !== 'tab-' + t));
+    $('#tituloSeccion').textContent = TITULOS[t];
     history.replaceState(null, '', '#' + t);
+    scrollTo(0, 0);
     if (t === 'fotos') cargarFotos();
-    if (t === 'confirmaciones' || t === 'playlist' || t === 'mensajes') cargarRsvps();
+    if (t === 'confirmaciones') cargarRsvps();
+    if (t === 'evento') pintarEvento();
   }
   $('#pestanas').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) abrirTab(b.dataset.tab); });
+
+  /* ---------- Menú del encabezado ---------- */
+  function menu(abrir) {
+    $('#menuLista').classList.toggle('oculto', !abrir);
+    $('#btnMenu').setAttribute('aria-expanded', String(abrir));
+  }
+  $('#btnMenu').addEventListener('click', e => { e.stopPropagation(); menu($('#menuLista').classList.contains('oculto')); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu-sup')) menu(false); });
 
   async function cargarTodo() {
     await Promise.all([cargarGrupos(), cargarRsvps(), cargarPreguntas(), cargarEstados()]);
@@ -75,29 +88,29 @@
   function rsvpDe(g) { return rsvps.find(r => r.grupo && r.grupo.slug === g.slug); }
   function pintarGrupos() {
     const cupoTotal = grupos.reduce((a, g) => a + g.cupo, 0);
-    $('#resumenInvitados').textContent = `${grupos.length} grupos · ${cupoTotal} lugares reservados`;
-    if (!grupos.length) { $('#tablaGrupos').innerHTML = '<tr><td class="vacio-tabla">Todavía no hay grupos. Agregalos arriba o importá un CSV.</td></tr>'; return; }
-    $('#tablaGrupos').innerHTML = `<thead><tr><th>Nombres</th><th>Cupo</th><th>Respuesta</th><th>Link</th><th></th></tr></thead><tbody>` +
-      grupos.map(g => {
-        const r = rsvpDe(g);
-        const estado = r ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>` : '<span class="pill sin">Sin respuesta</span>';
-        return `<tr data-id="${g.id}">
-          <td><b>${esc(g.nombres)}</b>${listaIntegrantes(g.integrantes).length ? `<br><small>👥 ${esc(listaIntegrantes(g.integrantes).join(', '))}</small>` : ''}${g.telefono ? `<br><small class="suave">${esc(g.telefono)}</small>` : ''}</td>
-          <td>${g.cupo}</td>
-          <td>${estado}</td>
-          <td><code>?i=${esc(g.slug)}</code></td>
-          <td class="acciones">
-            <a class="btn btn-oro" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(C.mensajeWhatsApp.replace('{nombres}', g.nombres).replace('{link}', linkGrupo(g)), g.telefono))}">WhatsApp</a>
-            <button class="btn" data-accion="copiar">Copiar link</button>
-            <button class="btn" data-accion="editar">Editar</button>
-            <button class="btn" data-accion="borrar" aria-label="Borrar ${esc(g.nombres)}">🗑</button>
-          </td></tr>`;
-      }).join('') + '</tbody>';
+    $('#resumenInvitados').textContent = `${grupos.length} ${grupos.length === 1 ? 'familia' : 'familias'} · ${cupoTotal} lugares`;
+    if (!grupos.length) { $('#listaGrupos').innerHTML = '<p class="vacio-tabla">Todavía no hay familias. Tocá «+ Nueva familia» o importá un CSV.</p>'; return; }
+    // Una tarjeta por familia: nombres, integrantes, cupo, estado y botones grandes
+    $('#listaGrupos').innerHTML = grupos.map(g => {
+      const r = rsvpDe(g);
+      const estado = r ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>` : '<span class="pill sin">Sin respuesta</span>';
+      const integ = listaIntegrantes(g.integrantes);
+      return `<article class="familia" data-id="${g.id}">
+        <div class="familia-cab"><h4>${esc(g.nombres)}</h4>${estado}</div>
+        ${integ.length ? `<p class="integ">👥 ${esc(integ.join(', '))}</p>` : ''}
+        <p class="meta">Cupo ${g.cupo}${g.telefono ? ' · 📞 ' + esc(g.telefono) : ''}<br><code>?i=${esc(g.slug)}</code></p>
+        <div class="familia-botones">
+          <a class="btn btn-oro btn-wa" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(C.mensajeWhatsApp.replace('{nombres}', g.nombres).replace('{link}', linkGrupo(g)), g.telefono))}">💬 Enviar por WhatsApp</a>
+          <button class="btn" data-accion="copiar" type="button">🔗 Copiar link</button>
+          <button class="btn" data-accion="editar" type="button">✏️ Editar</button>
+          <button class="btn btn-peligro" data-accion="borrar" type="button" aria-label="Borrar ${esc(g.nombres)}">🗑 Borrar</button>
+        </div></article>`;
+    }).join('');
   }
-  $('#tablaGrupos').addEventListener('click', async e => {
+  $('#listaGrupos').addEventListener('click', async e => {
     const b = e.target.closest('button[data-accion]');
     if (!b) return;
-    const g = grupos.find(x => x.id === b.closest('tr').dataset.id);
+    const g = grupos.find(x => x.id === b.closest('.familia').dataset.id);
     if (b.dataset.accion === 'copiar') {
       try { await navigator.clipboard.writeText(linkGrupo(g)); toast('Link copiado ✔'); } catch (ex) { prompt('Copiá el link:', linkGrupo(g)); }
     } else if (b.dataset.accion === 'editar') {
@@ -105,19 +118,27 @@
       f.id.value = g.id; f.nombres.value = g.nombres; f.cupo.value = g.cupo; f.telefono.value = g.telefono || ''; f.slug.value = g.slug;
       f.integrantes.value = listaIntegrantes(g.integrantes).join(', ');
       cupoManual = listaIntegrantes(g.integrantes).length !== g.cupo;
-      $('#btnGuardarGrupo').textContent = 'Guardar cambios';
-      $('#btnCancelarGrupo').classList.remove('oculto');
-      f.scrollIntoView({ behavior: 'smooth' }); f.nombres.focus();
+      mostrarFormGrupo('Editar familia', 'Guardar cambios');
     } else if (b.dataset.accion === 'borrar') {
       if (!confirm(`¿Borrar a «${g.nombres}»? También se borra su confirmación.`)) return;
-      await conBoton(b, async () => { await A.borrarGrupo(g.id); toast('Grupo borrado'); await cargarGrupos(); });
+      await conBoton(b, async () => { await A.borrarGrupo(g.id); toast('Familia borrada'); await cargarGrupos(); });
     }
   });
+  function mostrarFormGrupo(titulo, boton) {
+    const f = $('#formGrupo');
+    $('#tituloFormGrupo').textContent = titulo;
+    $('#btnGuardarGrupo').textContent = boton;
+    f.classList.remove('oculto');
+    $('#btnNuevaFamilia').classList.add('oculto');
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => f.nombres.focus(), 300);
+  }
   function limpiarFormGrupo() {
     const f = $('#formGrupo'); f.reset(); f.id.value = ''; slugManual = false; cupoManual = false;
-    $('#btnGuardarGrupo').textContent = 'Agregar grupo';
-    $('#btnCancelarGrupo').classList.add('oculto');
+    f.classList.add('oculto');
+    $('#btnNuevaFamilia').classList.remove('oculto');
   }
+  $('#btnNuevaFamilia').addEventListener('click', () => { limpiarFormGrupo(); mostrarFormGrupo('Nueva familia', 'Guardar familia'); });
   $('#btnCancelarGrupo').addEventListener('click', limpiarFormGrupo);
   let slugManual = false, cupoManual = false;
   $('#formGrupo').slug.addEventListener('input', () => { slugManual = true; });
@@ -149,7 +170,7 @@
     if (integ.length > g.cupo) { toast(`Hay ${integ.length} integrantes y el cupo es ${g.cupo}: subí el cupo o sacá nombres`, 'error', 6000); return; }
     await conBoton($('#btnGuardarGrupo'), async () => {
       await A.guardarGrupo(g);
-      toast(g.id ? 'Cambios guardados ✔' : 'Grupo agregado ✔');
+      toast(g.id ? 'Cambios guardados ✔' : 'Familia agregada ✔');
       limpiarFormGrupo();
       await cargarGrupos();
     });
@@ -223,12 +244,12 @@
     const lugares = grupos.reduce((a, g) => a + g.cupo, 0);
     const n = (num, txt) => `<div class="num"><b>${num}</b><span>${txt}</span></div>`;
     $('#numeros').innerHTML = n(personas, 'personas confirmadas') + n(si.length, 'grupos que vienen') + n(no.length, 'no van') + n(nose.length, 'todavía no saben') + n(sinResp, 'grupos sin respuesta') + n(lugares, 'lugares reservados');
-    if (!rsvps.length) { $('#tablaRsvp').innerHTML = '<tr><td class="vacio-tabla">Todavía no hay respuestas.</td></tr>'; return; }
-    $('#tablaRsvp').innerHTML = `<thead><tr><th>Grupo / nombre</th><th>¿Viene?</th><th>Cant.</th><th>Quiénes vienen</th><th>Actualizado</th></tr></thead><tbody>` +
-      rsvps.map(r => `<tr><td><b>${esc(nombreRsvp(r))}</b>${r.grupo ? '' : ' <small class="suave">(link general)</small>'}</td>
-        <td><span class="pill ${r.asiste}">${textoAsiste[r.asiste]}</span></td><td>${r.cantidad || ''}</td>
-        <td>${r.asiste === 'si' ? esc(r.nombres_asistentes || '') : ''}</td>
-        <td><small>${S60.formatoFechaHora(r.actualizado)}</small></td></tr>`).join('') + '</tbody>';
+    if (!rsvps.length) { $('#listaRsvp').innerHTML = '<p class="vacio-tabla">Todavía no hay respuestas.</p>'; return; }
+    $('#listaRsvp').innerHTML = rsvps.map(r => `<article class="familia respuesta">
+        <div class="familia-cab"><h4>${esc(nombreRsvp(r))}${r.grupo ? '' : ' <small class="suave">(link general)</small>'}</h4>
+          <span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span></div>
+        ${r.asiste === 'si' && r.nombres_asistentes ? `<p class="integ">👥 ${esc(r.nombres_asistentes)}</p>` : ''}
+        <p class="meta">Actualizado ${S60.formatoFechaHora(r.actualizado)}</p></article>`).join('');
   }
   const nombreRsvp = r => r.grupo ? r.grupo.nombres : (r.nombre_contacto || 'Sin nombre');
   $('#btnExportarRsvp').addEventListener('click', () => {
@@ -258,9 +279,9 @@
   }
   function pintarPlaylist() {
     const p = playlist();
-    $('#tablaPlaylist').innerHTML = p.length ? `<thead><tr><th>Tema</th><th>Artista</th><th>Pedidos</th><th>Quién la pidió</th></tr></thead><tbody>` +
-      p.map(c => `<tr><td><b>${esc(c.tema)}</b></td><td>${esc(c.artista)}</td><td>${c.veces}</td><td><small>${esc(c.quienes.join(', '))}</small></td></tr>`).join('') + '</tbody>'
-      : '<tr><td class="vacio-tabla">Todavía no pidieron canciones.</td></tr>';
+    $('#listaPlaylist').innerHTML = p.length ? p.map(c => `<div class="cancion"><p><b>🎵 ${esc(c.tema)}</b>${c.artista ? ' · ' + esc(c.artista) : ''}${c.veces > 1 ? ` <span class="pill si">×${c.veces}</span>` : ''}</p>
+        <small class="suave">${esc(c.quienes.join(', '))}</small></div>`).join('')
+      : '<p class="vacio-tabla">Todavía no pidieron canciones.</p>';
   }
   $('#btnExportarPlaylist').addEventListener('click', () => S60.descargarArchivo(csv(playlist(), [
     { titulo: 'Tema', valor: c => c.tema }, { titulo: 'Artista', valor: c => c.artista }, { titulo: 'Pedidos', valor: c => c.veces }, { titulo: 'Quién la pidió', valor: c => c.quienes.join(', ') }
@@ -366,11 +387,20 @@
     const imgs = await Promise.all(preguntas.map(p => Datos.resolverImagen(p.imagen)));
     $('#listaPreguntas').innerHTML = preguntas.length ? preguntas.map((p, i) => `
       <div class="pregunta-card ${p.activa ? '' : 'inactiva'}" data-id="${p.id}">
-        <span class="num-p">${p.orden}</span>
-        <div class="cuerpo"><p>${esc(p.texto)}${p.activa ? '' : ' <small class="suave">(no se juega)</small>'}</p>
-          <ul>${p.opciones.map((o, j) => `<li class="${j === p.correcta ? 'ok' : ''}">${esc(o)}${j === p.correcta ? ' ✔' : ''}</li>`).join('')}</ul></div>
+        <span class="num-p">${i + 1}</span>
+        <div class="cuerpo"><span class="tipo-chip">${p.tipo === 'vf' ? '✅❌ Verdadero o Falso' : '🔢 Opción múltiple'}</span>
+          <p>${esc(p.texto)}${p.activa ? '' : ' <small class="suave">(no se juega)</small>'}</p>
+          ${p.tipo === 'vf'
+            ? `<ul><li class="ok">${p.correcta ? '❌ FALSO' : '✅ VERDADERO'} ✔</li></ul>`
+            : `<ul>${p.opciones.map((o, j) => `<li class="${j === p.correcta ? 'ok' : ''}">${esc(o)}${j === p.correcta ? ' ✔' : ''}</li>`).join('')}</ul>`}
+          ${p.dato ? `<p class="dato-p">💡 ${esc(p.dato)}</p>` : ''}</div>
         ${imgs[i] ? `<img src="${esc(imgs[i])}" alt="">` : ''}
-        <div class="fila-botones"><button class="btn btn-chico" data-a="editar">Editar</button><button class="btn btn-chico" data-a="borrar" aria-label="Borrar pregunta">🗑</button></div>
+        <div class="acciones-p">
+          <button class="btn" data-a="subir" type="button" aria-label="Subir" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn" data-a="bajar" type="button" aria-label="Bajar" ${i === preguntas.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="btn btn-editar" data-a="editar" type="button">✏️ Editar</button>
+          <button class="btn btn-peligro" data-a="borrar" type="button" aria-label="Borrar pregunta">🗑</button>
+        </div>
       </div>`).join('') : '<p class="suave">No hay preguntas. Agregá entre 10 y 15.</p>';
     pintarEstadoTrivia();
   }
@@ -380,8 +410,14 @@
     f.reset();
     f.id.value = p ? p.id : '';
     f.texto.value = p ? p.texto : '';
-    [0, 1, 2, 3].forEach(i => { f['op' + i].value = p ? p.opciones[i] || '' : ''; });
-    if (p) f.querySelector(`[name=correcta][value="${p.correcta}"]`).checked = true;
+    const vf = p && p.tipo === 'vf';
+    f.querySelector(`[name=tipo][value="${vf ? 'vf' : 'multiple'}"]`).checked = true;
+    [0, 1, 2, 3].forEach(i => { f['op' + i].value = p && !vf ? p.opciones[i] || '' : ''; });
+    if (p && !vf) f.querySelector(`[name=correcta][value="${p.correcta}"]`).checked = true;
+    if (vf) f.querySelector(`[name=vf][value="${p.correcta}"]`).checked = true;
+    f.dato.value = p ? p.dato || '' : '';
+    mostrarTipo();
+    $('#tituloPregunta').textContent = p ? 'Editar pregunta' : 'Nueva pregunta';
     f.orden.value = p ? p.orden : (preguntas.reduce((m, x) => Math.max(m, x.orden), 0) + 1);
     f.activa.checked = p ? p.activa : true;
     imagenPregunta = p ? p.imagen : null;
@@ -401,13 +437,46 @@
     const b = e.target.closest('button[data-a]'); if (!b) return;
     const p = preguntas.find(x => x.id === b.closest('.pregunta-card').dataset.id);
     if (b.dataset.a === 'editar') abrirPregunta(p);
-    else if (confirm('¿Borrar esta pregunta?')) await conBoton(b, async () => { await A.borrarPregunta(p.id); await cargarPreguntas(); });
+    else if (b.dataset.a === 'subir' || b.dataset.a === 'bajar') await conBoton(b, () => moverPregunta(p, b.dataset.a === 'subir' ? -1 : 1));
+    else if (confirm(`¿Borrar esta pregunta?\n\n«${p.texto}»\n\nNo se puede deshacer.`)) await conBoton(b, async () => { await A.borrarPregunta(p.id); toast('Pregunta borrada'); await cargarPreguntas(); });
   });
+  // ▲ ▼: intercambia con la de al lado y renumera 1, 2, 3… (solo guarda las que cambiaron)
+  async function moverPregunta(p, paso) {
+    const lista = preguntas.slice();
+    const i = lista.indexOf(p), j = i + paso;
+    if (j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    const cambios = lista.map((q, k) => ({ q, orden: k + 1 })).filter(x => x.q.orden !== x.orden);
+    for (const { q, orden } of cambios) await A.guardarPregunta(Object.assign({}, q, { orden }));
+    await cargarPreguntas();
+    const card = $(`#listaPreguntas [data-id="${p.id}"]`);
+    if (card) { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); card.classList.add('recien'); setTimeout(() => card.classList.remove('recien'), 1200); }
+  }
+  // Muestra las opciones o los botones Verdadero / Falso según el tipo
+  function mostrarTipo() {
+    const vf = $('#formPregunta').querySelector('[name=tipo]:checked').value === 'vf';
+    $('#bloqueMultiple').classList.toggle('oculto', vf);
+    $('#bloqueVF').classList.toggle('oculto', !vf);
+  }
+  $('#formPregunta').addEventListener('change', e => { if (e.target.name === 'tipo') { mostrarTipo(); $('#errorPregunta').textContent = ''; } });
   $('#formPregunta').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target;
-    const correcta = f.querySelector('[name=correcta]:checked');
-    if (!correcta) { $('#errorPregunta').textContent = 'Marcá cuál es la opción correcta'; return; }
+    const tipo = f.querySelector('[name=tipo]:checked').value;
+    let opciones, correctaIdx;
+    if (tipo === 'vf') {
+      const r = f.querySelector('[name=vf]:checked');
+      if (!r) { $('#errorPregunta').textContent = 'Marcá si es VERDADERO o FALSO'; return; }
+      opciones = ['Verdadero', 'Falso']; correctaIdx = +r.value;
+    } else {
+      // Se usan las opciones escritas (2 a 4), en orden; la marcada tiene que estar escrita
+      const escritas = [0, 1, 2, 3].map(i => ({ i, t: f['op' + i].value.trim() })).filter(o => o.t);
+      if (escritas.length < 2) { $('#errorPregunta').textContent = 'Escribí al menos 2 opciones'; return; }
+      const r = f.querySelector('[name=correcta]:checked');
+      const pos = r ? escritas.findIndex(o => o.i === +r.value) : -1;
+      if (pos < 0) { $('#errorPregunta').textContent = r ? 'La opción marcada como correcta está vacía' : 'Marcá cuál es la opción correcta'; return; }
+      opciones = escritas.map(o => o.t); correctaIdx = pos;
+    }
     const btn = f.querySelector('[type=submit]');
     await conBoton(btn, async () => {
       if (f.imagen.files[0]) {
@@ -416,8 +485,8 @@
         imagenPregunta = await A.subirImagenTrivia(blob);
       }
       await A.guardarPregunta({
-        id: f.id.value || null, texto: f.texto.value.trim(), opciones: [0, 1, 2, 3].map(i => f['op' + i].value.trim()),
-        correcta: +correcta.value, orden: parseInt(f.orden.value, 10) || 1, imagen: imagenPregunta, activa: f.activa.checked
+        id: f.id.value || null, tipo, texto: f.texto.value.trim(), opciones, correcta: correctaIdx, dato: f.dato.value.trim() || null,
+        orden: parseInt(f.orden.value, 10) || 1, imagen: imagenPregunta, activa: f.activa.checked
       });
       $('#modalPregunta').classList.add('oculto');
       toast('Pregunta guardada ✔');
@@ -456,7 +525,8 @@
   function pintarPantalla() {
     const p = pantallaEstado;
     const prueba = !!p.modo_prueba;
-    $('#btnModoPrueba').textContent = prueba ? 'Apagar modo prueba' : 'Prender modo prueba';
+    $('#btnModoPrueba').textContent = prueba ? '🧪 Apagar modo prueba' : '🧪 Prender modo prueba';
+    $('#btnModoPrueba').classList.toggle('activo', prueba);
     $('#estadoPrueba').textContent = prueba ? '🧪 MODO PRUEBA PRENDIDO: /fotos está habilitado' : 'Modo prueba apagado';
     $('.tarjeta-prueba').classList.toggle('activo', prueba);
     let banner = $('#bannerPrueba');
@@ -470,6 +540,18 @@
     pantallaEstado.muro_pausado = !pantallaEstado.muro_pausado; pintarPantalla();
   }));
   $('#btnIrTrivia').addEventListener('click', () => abrirTab('trivia'));
+  // Control remoto: sacar de la pantalla la última foto publicada (sin borrarla)
+  $('#btnOcultarUltima').addEventListener('click', e => conBoton(e.currentTarget, async () => {
+    await cargarFotos();
+    const ultima = fotos.filter(f => f.estado === 'publicada').sort((a, b) => new Date(b.creado) - new Date(a.creado))[0];
+    if (!ultima) { toast('No hay fotos publicadas'); return; }
+    $('#ultimaFotoInfo').innerHTML = `<img src="${esc(ultima.url || '')}" alt=""><span>📸 ${esc(ultima.autor)} · ${S60.formatoHora(ultima.creado)} h${ultima.leyenda ? '<br><i>“' + esc(ultima.leyenda) + '”</i>' : ''}</span>`;
+    if (!confirm(`¿Ocultar la última foto (de ${ultima.autor})? No se borra: la podés volver a mostrar desde Fotos.`)) return;
+    await A.actualizarFoto(ultima.id, { estado: 'oculta' });
+    ultima.estado = 'oculta';
+    $('#ultimaFotoInfo').insertAdjacentHTML('beforeend', '<b class="ok-txt">Oculta ✔</b>');
+    toast('Foto oculta de la pantalla ✔');
+  }));
   $('#btnModoPrueba').addEventListener('click', e => conBoton(e.currentTarget, async () => {
     const nuevo = !pantallaEstado.modo_prueba;
     await A.actualizarPantalla({ modo_prueba: nuevo });
@@ -501,6 +583,47 @@
     await A.actualizarPantalla({ mensaje_manual: '' });
     pantallaEstado.mensaje_manual = ''; pintarPantalla();
   }));
+
+  /* ====================== EVENTO (fecha y hora) ====================== */
+  // Partes de una fecha en hora de San Juan, para cargar los <input type=date/time>
+  function partesSJ(iso) {
+    const p = {};
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/San_Juan', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(iso)).forEach(x => { p[x.type] = x.value; });
+    return { fecha: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour}:${p.minute}` };
+  }
+  function vistaEvento() {
+    $('#vistaEvento').innerHTML = `<p class="chico suave">Así se ve en la invitación:</p>
+      <p class="pill-vista"><span class="nw">${esc(C.fechaCorta)}</span> · <span class="nw">${esc(C.horaTexto)}</span> · <span class="nw">¡Sé puntual!</span></p>
+      <p>📅 <span class="nw">${esc(C.fechaTexto)}</span> · <span class="nw">${esc(C.horaTexto)}</span><br>⏰ ${esc(C.textoPuntual)}<br>✉️ Confirmar hasta el ${esc(C.fechaLimiteTexto)}<br>📸 /fotos se habilita desde las ${S60.formatoHora(new Date(C.fotosDesde))} h</p>`;
+  }
+  async function pintarEvento() {
+    await S60.cargarEvento();
+    const f = $('#formEvento'), ev = partesSJ(C.fechaEvento);
+    f.fecha.value = ev.fecha; f.hora.value = ev.hora;
+    f.puntual.value = C.textoPuntual || '';
+    f.limite.value = partesSJ(C.fechaLimiteRsvp).fecha;
+    $('#errorEvento').textContent = '';
+    vistaEvento();
+  }
+  $('#formEvento').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    $('#errorEvento').textContent = '';
+    if (!f.fecha.value || !f.hora.value || !f.limite.value) { $('#errorEvento').textContent = 'Completá la fecha, la hora y el límite para confirmar'; return; }
+    const cambios = {
+      fecha_evento: `${f.fecha.value}T${f.hora.value}:00-03:00`,
+      fecha_limite_rsvp: `${f.limite.value}T23:59:59-03:00`,
+      texto_puntual: f.puntual.value.trim() || '¡Por favor, sé puntual!'
+    };
+    if (new Date(cambios.fecha_limite_rsvp) > new Date(cambios.fecha_evento)) { $('#errorEvento').textContent = 'El límite para confirmar tiene que ser antes de la fiesta'; return; }
+    await conBoton($('#btnGuardarEvento'), async () => {
+      await A.guardarEvento(cambios);
+      S60.aplicarEvento(cambios);
+      vistaEvento();
+      toast('Fecha y hora guardadas ✔ Ya se ven en la invitación');
+    });
+  });
 
   /* ---------- Arranque ---------- */
   A.sesion().then(s => { if (s) entrar(); });

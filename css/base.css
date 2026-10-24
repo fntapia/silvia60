@@ -121,7 +121,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .campo { display: block; margin: 0 0 1.1rem; text-align: left; }
 .campo > span, .etiqueta { display: block; font-weight: 600; margin-bottom: .35rem; color: var(--tinta); font-size: 1rem; }
 .campo small { color: var(--tinta-suave); font-size: .88rem; font-weight: 500; }
-.input, input[type=text], input[type=email], input[type=password], input[type=number], input[type=tel], select, textarea {
+.input, input[type=text], input[type=email], input[type=password], input[type=number], input[type=tel], input[type=date], input[type=time], select, textarea {
   width: 100%; min-height: 52px; padding: .7rem .9rem;
   border: 1.5px solid #e2e2e2; border-radius: 14px; background: #fff;
   font-size: 1.02rem;

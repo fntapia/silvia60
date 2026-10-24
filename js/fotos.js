@@ -11,6 +11,7 @@
 
   /* ---------- Abierto / cerrado ---------- */
   async function revisarHorario() {
+    await S60.cargarEvento();   // la hora puede haber cambiado en el panel → Evento
     const prueba = await S60.modoPruebaActivo();
     const abierto = S60.fotosHabilitadas(prueba);
     $('#abierto').classList.toggle('oculto', !abierto);

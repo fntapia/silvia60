@@ -96,8 +96,12 @@ Entrá a `.../silvia60/panel/` con tu email y contraseña → **Invitados**:
 - De a uno: escribí los nombres a mostrar (ej. «Familia Gómez»), el cupo y el teléfono. El link se arma solo (con 4 letras al azar al final para que nadie adivine el de otra familia).
 - **Integrantes:** escribí los nombres separados por coma (ej. «Marta, Carlos, Sofi, Juan»). El cupo se cuenta solo, y en la invitación esa familia ve una casilla por persona («¿Quiénes vienen?»). Sin integrantes, la invitación pide cantidad y nombres.
 - Todos juntos desde Excel: completá `07 Invitados/invitados.csv` (columnas **slug; nombres_a_mostrar; integrantes; cupo; telefono; notas**, separadas por `;`). Dejá el **slug vacío** y se genera solo; si el **cupo** queda vacío se cuenta con los integrantes; la fila `familia-ejemplo` se ignora. Después, en el panel, **Importar CSV** y elegí ese archivo. Si importás dos veces, los que ya estaban se saltean.
+- Desde el celular: **+ Nueva familia** abre el formulario; cada familia es una tarjeta con **Enviar por WhatsApp**, **Copiar link**, **Editar** y **Borrar**.
 - Botón **WhatsApp** de cada grupo: abre WhatsApp con el mensaje y su link personal listos para mandar. El texto del mensaje se cambia en `config.js` (`mensajeWhatsApp`).
 - El link general (sin `?i=`) también sirve: pide nombre y cantidad.
+
+### ✔ Fecha y hora (se cambian desde el panel)
+Panel → **Evento**: fecha, hora, el texto de puntualidad y hasta cuándo se puede confirmar. Tocás **Guardar y aplicar** y se actualiza al instante en la invitación, la cuenta regresiva, «Agendar», /fotos (se habilita 2 h antes) y la pantalla, sin volver a subir nada a GitHub. La imagen de WhatsApp no tiene la hora, así que no hace falta regenerarla. (Requiere haber corrido `supabase/actualizacion-3.sql` una vez; `config.js` queda como respaldo.)
 
 ### ☐ Preguntas de la trivia
 Panel → **Trivia** → hay 5 de ejemplo. Editalas con las respuestas reales y agregá hasta 10–15. Podés poner una foto en cada pregunta.
