@@ -620,6 +620,10 @@
             else if (accion === 'terminar') e.fase = 'podio';
             else if (accion === 'cerrar') { e.fase = 'apagada'; d.pantalla.modo = 'fotos'; pantallaCambio = d.pantalla; }
             else err('Acción desconocida');
+            // Podio sin jugadores = trivia apagada y muro de fotos (igual que en la base real)
+            if (e.fase === 'podio' && !d.trivia_jugadores.some(j => j.partida === e.partida)) {
+              e.fase = 'apagada'; d.pantalla.modo = 'fotos'; pantallaCambio = d.pantalla;
+            }
             e.actualizado = new Date().toISOString();
             return e;
           });

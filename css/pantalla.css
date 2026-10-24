@@ -19,7 +19,7 @@ body.pantalla .ornamento { width: 16rem; height: 16rem; }
 .logo-60 { font-family: var(--fuente-serif); font-weight: 700; font-size: 3.4rem; }
 
 /* Vacío */
-.vacio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-right: 18rem; }
+.vacio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1.2rem; }
 .vacio-titulo { font-size: 9rem; margin: 0; line-height: 1.1; }
 .vacio-texto { font-size: 2.6rem; font-weight: 600; color: var(--oro-texto); line-height: 1.4; }
 
@@ -196,3 +196,12 @@ body.modo-trivia .t-cabecera { padding-right: 22rem; }
 .vf-carta-res.girada { transform: rotateY(180deg); }
 .vf-carta-res.sin-anim { transition: none; }
 .t-dato { margin: -.6rem 0 1rem; padding: .7rem 2rem; border-radius: 999px; background: #1A1A1A; color: #FFF3C4; font-size: 2.2rem; font-weight: 700; box-shadow: inset 0 0 0 2px rgba(245, 217, 122, .6); }
+/* ===== Muro sin fotos: emblema grande + QR grande ===== */
+.vacio-emblema { --t: 11rem; animation: latido 3s ease-in-out infinite; }
+.vacio .vacio-titulo { font-size: 4.4rem; font-weight: 800; color: var(--tinta); margin: .4rem 0 .6rem; }
+.vacio-qr { display: flex; align-items: center; gap: 2rem; padding: 1.4rem 2.6rem 1.4rem 1.4rem; border-radius: 2rem; text-align: left;
+  background: #1A1A1A; box-shadow: 0 1.4rem 3rem rgba(40, 28, 0, .3), inset 0 0 0 3px rgba(245, 217, 122, .6); }
+.vacio-qr .qr-grande { width: 16rem; height: 16rem; background: #fff; border-radius: 1.1rem; padding: .7rem; }
+.vacio-qr-titulo { margin: 0; font-size: 3.2rem; font-weight: 700; color: #F5D97A; white-space: nowrap; }
+.oro-txt { background: var(--grad-oro); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.vacio-qr .esquina-link { font-size: 1.4rem; }

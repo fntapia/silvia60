@@ -39,17 +39,13 @@
   const textoLink = u => C.linkCortoTexto || u.replace(/^https?:\/\//, '').replace(/\/$/, '');
   function esquinaFotos() {
     $('#qrFotos').innerHTML = S60.qrSvg(linkFotos);
-    $('.esquina-titulo').innerHTML = '<span class="oro-txt">¡Subí tu foto!</span> 📸';
-    $('.esquina-eyebrow').textContent = 'Aparece acá al instante';
+    $('#esquinaQr .esquina-titulo').innerHTML = '<span class="oro-txt">¡Subí tu foto!</span> 📸';
+    $('#esquinaQr .esquina-eyebrow').textContent = 'Aparece acá al instante';
     $('#linkFotos').textContent = textoLink(linkFotos);
   }
-  function esquinaTrivia() {
-    $('#qrFotos').innerHTML = S60.qrSvg(linkTrivia);
-    $('.esquina-titulo').innerHTML = '<span class="oro-txt">¡Sumate a la trivia!</span> 🎯';
-    $('.esquina-eyebrow').textContent = 'Escaneá y jugá';
-    $('#linkFotos').textContent = linkTrivia.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  }
   esquinaFotos();
+  $('#qrVacio').innerHTML = S60.qrSvg(linkFotos);
+  $('#linkVacio').textContent = textoLink(linkFotos);
   $('#qrTrivia').innerHTML = S60.qrSvg(linkTrivia);
   $('#linkTrivia').textContent = linkTrivia.replace(/^https?:\/\//, '');
 
@@ -93,6 +89,7 @@
     const hay = fotos.length > 0;
     $('#vacio').classList.toggle('oculto', hay);
     $('#collage').classList.toggle('oculto', !hay);
+    aplicarModo();
   }
 
   /* ====================== MURO DE POLAROIDS ====================== */
@@ -109,7 +106,7 @@
   let zTop = 10;
   let ocupado = false;            // hay una foto nueva, un zoom o una lluvia en curso
   const collage = $('#collage');
-  const muroActivo = () => pantalla.modo === 'fotos' && !pantalla.muro_pausado && !(pantalla.mensaje_manual || '').trim() && !document.hidden;
+  const muroActivo = () => !triviaVisible() && !pantalla.muro_pausado && !(pantalla.mensaje_manual || '').trim() && !document.hidden;
   const pie = f => `📸 ${esc(f.autor)}${f.leyenda ? ' · ' + esc(f.leyenda) : ''}`;
   const base = g => `translate(-50%, -50%) rotate(${g}deg)`;
 
@@ -282,7 +279,7 @@
     const modoAntes = pantalla.modo;
     pantalla = Object.assign(pantalla, p);
     if (modoAntes !== pantalla.modo && typeof Trivia !== 'undefined') setTimeout(() => Trivia.cambio(), 0);
-    $('#pausa').classList.toggle('oculto', !pantalla.muro_pausado || pantalla.modo === 'trivia');
+    $('#pausa').classList.toggle('oculto', !pantalla.muro_pausado || triviaVisible());
     const manual = (pantalla.mensaje_manual || '').trim();
     $('#manual').classList.toggle('oculto', !manual);
     $('#manualTexto').textContent = manual;
@@ -290,12 +287,48 @@
     aplicarModo();
   }
   function aplicarModo() {
-    const enTrivia = pantalla.modo === 'trivia' && trivia.fase !== 'apagada';
+    const enTrivia = triviaVisible();
     $('#vistaFotos').classList.toggle('oculto', enTrivia);
     $('#vistaTrivia').classList.toggle('oculto', !enTrivia);
     document.body.classList.toggle('modo-trivia', enTrivia);
-    if (enTrivia) { esquinaTrivia(); $('#mensaje').classList.add('oculto'); } else esquinaFotos();
-    $('#esquinaQr').classList.toggle('oculto', enTrivia && (trivia.fase === 'lobby' || trivia.fase === 'podio'));
+    if (enTrivia) $('#mensaje').classList.add('oculto');
+    // El QR de fotos está siempre, salvo en el lobby de la trivia (tiene el suyo) y con el muro vacío (ahí va grande al centro)
+    const muroVacio = !enTrivia && !fotos.length;
+    $('#esquinaQr').classList.toggle('oculto', (enTrivia && trivia.fase === 'lobby') || muroVacio);
+  }
+
+  /* ---------- A prueba de fallas: la trivia nunca deja la pantalla trabada ---------- */
+  // Si la trivia queda en podio sin jugadores, o en cualquier fase más tiempo del normal (podio 60 s, ranking 90 s,
+  // otras 3 min sin cambios), la pantalla vuelve sola al muro. Cualquier acción nueva del panel la vuelve a mostrar.
+  let firmaTrivia = '', cambioTrivia = Date.now(), alMuroPor = '', desfase = 0, jugadoresVistos = -1;
+  const firmaDe = e => [e.fase, e.partida, e.pregunta_id, e.pregunta_num, e.actualizado].join('|');
+  function triviaVisible() { return pantalla.modo === 'trivia' && !!trivia.fase && trivia.fase !== 'apagada' && !alMuroPor; }
+  function notarTrivia() {
+    const f = firmaDe(trivia);
+    if (f === firmaTrivia) return;
+    const primera = !firmaTrivia;
+    firmaTrivia = f; alMuroPor = ''; jugadoresVistos = -1;
+    // al abrir la pantalla, la edad cuenta desde el último cambio guardado en la base: un estado viejo vuelve solo al muro
+    const enBase = trivia.actualizado ? new Date(trivia.actualizado).getTime() - desfase : NaN;
+    cambioTrivia = primera && enBase ? Math.min(Date.now(), enBase) : Date.now();
+  }
+  function alMuro(motivo) {
+    if (alMuroPor) return;
+    alMuroPor = motivo;
+    console.info('Pantalla: vuelvo al muro de fotos (' + motivo + ')');
+    Trivia.cambio();
+  }
+  async function vigilarTrivia() {
+    if (pantalla.modo !== 'trivia' || !trivia.fase || trivia.fase === 'apagada' || alMuroPor) return;
+    let jug = null;
+    if (trivia.fase === 'podio' || trivia.fase === 'lobby') { try { jug = await Datos.trivia.cantidadJugadores(); } catch (e) {} }
+    // mientras se siga sumando gente, el lobby espera
+    if (trivia.fase === 'lobby' && jug != null) { if (jugadoresVistos >= 0 && jug !== jugadoresVistos) cambioTrivia = Date.now(); jugadoresVistos = jug; }
+    const motivo = S60.triviaAlMuro(trivia.fase, Date.now() - cambioTrivia, jug);
+    if (motivo) alMuro(motivo);
+  }
+  async function medirDesfase() {
+    try { const p = await Datos.trivia.preguntaActual(); if (p && p.ahora) desfase = new Date(p.ahora).getTime() - Date.now(); } catch (e) {}
   }
 
   /* ---------- Sincronización robusta ---------- */
@@ -330,10 +363,11 @@
     const limpiar = () => { clearInterval(reloj); clearInterval(pollResp); clearInterval(pollJug); reloj = pollResp = pollJug = null; };
 
     async function cambio() {
+      notarTrivia();
       aplicarModo();
       limpiar();
       const f = trivia.fase;
-      if (f === 'apagada' || pantalla.modo !== 'trivia') return;
+      if (f === 'apagada' || !triviaVisible()) return;
       if (f === 'lobby') {
         ver('tLobby');
         const act = async () => {
@@ -354,8 +388,11 @@
         const r = await Datos.trivia.ranking(10);
         $('#rankingLista').innerHTML = r.map((j, i) => `<li style="--i:${i}"><span>${esc(j.apodo)}</span><b>${j.puntos}</b></li>`).join('') || '<li><span>Todavía no hay puntajes</span></li>';
       } else if (f === 'podio') {
+        let r = [];
+        try { r = await Datos.trivia.ranking(3) || []; } catch (e) {}
+        // Nunca un podio vacío: sin jugadores, directo al muro de fotos (con 1 o 2, solo esos lugares)
+        if (!r.length) { alMuro('podio sin jugadores'); return; }
         ver('tPodio');
-        const r = await Datos.trivia.ranking(3);
         const medallas = ['🥇', '🥈', '🥉'];
         const orden = [1, 0, 2].filter(i => r[i]);
         $('#podio').innerHTML = orden.map(i => `<div class="podio-lugar p${i + 1}"><div class="podio-medalla">${medallas[i]}</div><p class="podio-nombre">${esc(r[i].apodo)}</p><p class="podio-pts">${r[i].puntos} puntos</p><div class="podio-base">${i + 1}</div></div>`).join('');
@@ -481,6 +518,7 @@
   /* ---------- Arranque ---------- */
   (async function iniciar() {
     try { aplicarPantalla(await Datos.pantalla()); } catch (e) {}
+    await medirDesfase();
     try { trivia = await Datos.trivia.estado(); } catch (e) {}
     await sincronizarFotos(true);
     await cargarMensajes();
@@ -489,6 +527,8 @@
 
     setInterval(() => { if (muroActivo() && !ocupado) rotarUno(); }, SEG_ROTAR);
     setInterval(fotoNueva, 1000);
+    setInterval(vigilarTrivia, 3000);
+    setInterval(medirDesfase, 10 * 60000);
     setInterval(() => { if (Math.random() < .7) zoomAlAzar(); }, SEG_ZOOM);
     setInterval(() => { if (Date.now() - ultimaLluvia > SEG_LLUVIA) lluvia(); }, 15000);
     setTimeout(() => { mostrarMensaje(); setInterval(mostrarMensaje, CADA_MENSAJE); }, 25000);
@@ -497,14 +537,14 @@
     setInterval(() => sincronizarFotos(false), 45000);
     setInterval(async () => {
       try { aplicarPantalla(await Datos.pantalla()); } catch (e) {}
-      try { const e = await Datos.trivia.estado(); if (e.fase !== trivia.fase || e.pregunta_id !== trivia.pregunta_id) { trivia = e; Trivia.cambio(); } } catch (e) {}
+      try { const e = await Datos.trivia.estado(); if (firmaDe(e) !== firmaDe(trivia)) { trivia = e; Trivia.cambio(); } } catch (e) {}
     }, 10000);
     addEventListener('online', () => sincronizarFotos(false));
     addEventListener('offline', () => marcarConexion(false));
     // Recarga preventiva cada 6 h (libera memoria del navegador), solo si no hay trivia en curso
     setTimeout(function recargar() {
       // Con F11 la pantalla completa sobrevive a la recarga; con el botón no, así que en ese caso no se recarga
-      if (navigator.onLine && pantalla.modo === 'fotos' && !document.fullscreenElement) location.replace(location.pathname + '?sinInicio=1');
+      if (navigator.onLine && !triviaVisible() && !document.fullscreenElement) location.replace(location.pathname + '?sinInicio=1');
       else setTimeout(recargar, 60000);
     }, 6 * 3600e3);
   })();

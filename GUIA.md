@@ -134,6 +134,8 @@ El plan gratis **pausa el proyecto si pasa 1 semana sin uso**. Entre el 20/11 (c
 
 ## El día de la fiesta
 
+> 🛟 **Si la pantalla se traba:** en el panel (pestaña **Pantalla** o **Trivia**) tocá **🖼 Volver al muro de fotos**. Igual, la pantalla vuelve sola al muro: después del podio (60 s), del ranking (90 s) o si la trivia queda 3 minutos sin cambios. Arriba de esas pestañas, **«En el salón ahora»** te dice qué se está viendo.
+
 **En la notebook del salón (la que va al proyector o TV):**
 1. Enchufala a la corriente. En Windows: **Configuración → Sistema → Energía** → que la pantalla y la suspensión estén en **Nunca**.
 2. Conectala a internet: si el salón no tiene buen Wi-Fi, usá un celular con **datos compartidos** (hotspot). Llevá uno de respaldo.

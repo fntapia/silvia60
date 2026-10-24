@@ -128,6 +128,7 @@
       <!-- PANTALLA: control remoto -->
       <section class="tab oculto" id="tab-pantalla">
         <h2 class="titulo">Pantalla del salón</h2>
+        <p class="en-vivo"><span class="punto" aria-hidden="true"></span><span>En el salón ahora: <b class="en-vivo-txt">…</b></span></p>
         <p class="estado-trivia" id="estadoPantalla"></p>
         <div class="control-remoto">
           <button class="btn btn-oro control" id="btnPausa" type="button">⏸ Pausar muro</button>
@@ -153,11 +154,13 @@
           <button class="btn btn-peligro btn-bloque" id="btnBorrarPrueba" type="button">🗑 Borrar datos de prueba</button>
           <p class="suave chico" id="borrarProgreso"></p>
         </div>
+        <div class="volver-muro"><button class="btn btn-oro btn-bloque btn-volver-muro" type="button">🖼 Volver al muro de fotos</button></div>
       </section>
 
       <!-- TRIVIA: control remoto -->
       <section class="tab oculto" id="tab-trivia">
         <h2 class="titulo">Trivia</h2>
+        <p class="en-vivo"><span class="punto" aria-hidden="true"></span><span>En el salón ahora: <b class="en-vivo-txt">…</b></span></p>
         <p class="estado-trivia" id="estadoTrivia">Trivia apagada</p>
         <div class="control-remoto">
           <button class="btn btn-oro control ancho" data-accion="siguiente" type="button">⏭ Siguiente pregunta</button>
@@ -165,7 +168,6 @@
           <button class="btn control" data-accion="revelar" type="button">👁 Mostrar respuesta</button>
           <button class="btn control" data-accion="ranking" type="button">🏅 Mostrar ranking</button>
           <button class="btn control" data-accion="terminar" type="button">🏆 Terminar (podio)</button>
-          <button class="btn control ancho" data-accion="cerrar" type="button">📸 Volver a las fotos</button>
         </div>
         <p class="suave chico">Orden: Abrir (QR en pantalla) → que se sumen → Siguiente pregunta (la respuesta sale sola a los 20 s) → Siguiente… → Terminar.</p>
         <div class="fila-titulo">
@@ -173,6 +175,7 @@
           <button class="btn btn-chico" id="btnNuevaPregunta" type="button">+ Nueva</button>
         </div>
         <div id="listaPreguntas" class="preguntas"></div>
+        <div class="volver-muro"><button class="btn btn-oro btn-bloque btn-volver-muro" type="button">🖼 Volver al muro de fotos</button></div>
       </section>
 
       <!-- EVENTO: fecha, hora y puntualidad (se aplica al instante en todo el sitio) -->

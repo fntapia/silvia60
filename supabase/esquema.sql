@@ -478,6 +478,12 @@ begin
     update pantalla_estado set modo = 'fotos' where id = 1;
   else raise exception 'Acción desconocida';
   end if;
+  -- nunca un podio vacío
+  select * into e from trivia_estado where id = 1;
+  if e.fase = 'podio' and not exists (select 1 from trivia_jugadores where partida = e.partida) then
+    update trivia_estado set fase = 'apagada', actualizado = now() where id = 1;
+    update pantalla_estado set modo = 'fotos' where id = 1;
+  end if;
   return (select row_to_json(t) from trivia_estado t where id = 1);
 end $$;
 

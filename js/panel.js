@@ -45,10 +45,51 @@
     abrirTab(location.hash.slice(1) || 'invitados');
     cargarTodo();
     Datos.escucharFotos(() => { if (tabActual === 'fotos') cargarFotos(); });
-    Datos.trivia.escuchar(e => { triviaEstado = Object.assign(triviaEstado, e); pintarEstadoTrivia(); });
-    Datos.escucharPantalla(p => { pantallaEstado = Object.assign(pantallaEstado, p); pintarPantalla(); });
+    Datos.trivia.escuchar(e => { triviaEstado = Object.assign(triviaEstado, e); pintarEstadoTrivia(); pintarEnVivo(); });
+    Datos.escucharPantalla(p => { pantallaEstado = Object.assign(pantallaEstado, p); pintarPantalla(); pintarEnVivo(); });
     setInterval(pintarEstadoTrivia, 4000);
+    contarFotos(); medirDesfase();
+    setInterval(pintarEnVivo, 4000);
+    setInterval(contarFotos, 20000);
+    setInterval(medirDesfase, 10 * 60000);
   }
+
+  /* ---------- Qué se ve ahora en la pantalla del salón (mismas reglas que /pantalla) ---------- */
+  let fotosEnMuro = null, desfase = 0;
+  async function contarFotos() { try { fotosEnMuro = (await Datos.fotosPublicas()).length; pintarEnVivo(); } catch (e) {} }
+  async function medirDesfase() {
+    try { const p = await Datos.trivia.preguntaActual(); if (p && p.ahora) desfase = new Date(p.ahora).getTime() - Date.now(); } catch (e) {}
+  }
+  async function pintarEnVivo() {
+    const p = pantallaEstado || {}, e = triviaEstado || {};
+    const triviaAbierta = p.modo === 'trivia' && e.fase && e.fase !== 'apagada';
+    let jug = null;
+    if (triviaAbierta && (e.fase === 'podio' || e.fase === 'lobby')) { try { jug = await Datos.trivia.cantidadJugadores(); } catch (x) {} }
+    const edad = e.actualizado ? Date.now() - (new Date(e.actualizado).getTime() - desfase) : 0;
+    // en el lobby, mientras haya gente sumándose la pantalla espera: acá solo se aplica el límite si nadie entró
+    const vencida = triviaAbierta && !(e.fase === 'lobby' && jug > 0) && S60.triviaAlMuro(e.fase, edad, jug);
+    const enTrivia = triviaAbierta && !vencida;
+    const manual = (p.mensaje_manual || '').trim();
+    let txt;
+    if (manual) txt = `Mensaje «${manual.slice(0, 40)}${manual.length > 40 ? '…' : ''}»`;
+    else if (enTrivia) txt = { lobby: `Trivia: esperando jugadores${jug != null ? ' · ' + jug + ' adentro' : ''}`, pregunta: `Trivia: pregunta ${e.pregunta_num}/${e.total}`, resultado: `Trivia: respuesta de la ${e.pregunta_num}/${e.total}`, ranking: 'Trivia: ranking', podio: 'Podio 🏆' }[e.fase] || 'Trivia';
+    else if (p.muro_pausado) txt = 'Pausada ⏸';
+    else txt = fotosEnMuro == null ? 'Muro de fotos' : fotosEnMuro === 0 ? 'Muro de fotos · todavía sin fotos (QR grande)' : `Muro de fotos · ${fotosEnMuro} ${fotosEnMuro === 1 ? 'foto' : 'fotos'}`;
+    if (vencida) txt += ' (la trivia quedó abierta: la pantalla volvió sola)';
+    $$('.en-vivo').forEach(el => { el.classList.toggle('trivia', enTrivia); el.querySelector('.en-vivo-txt').textContent = txt; });
+  }
+
+  // Botón de emergencia: apaga la trivia y deja la pantalla en el muro de fotos, en un toque
+  $$('.btn-volver-muro').forEach(b => b.addEventListener('click', e => {
+    if (!confirm('¿Volver al muro de fotos?\n\nSe cierra la trivia (si estaba abierta).')) return;
+    conBoton(e.currentTarget, async () => {
+      const r = await A.controlTrivia('cerrar');
+      if (r) triviaEstado = Object.assign(triviaEstado, r);
+      pantallaEstado.modo = 'fotos';
+      pintarEstadoTrivia(); pintarPantalla(); pintarEnVivo();
+      toast('Listo: la pantalla muestra el muro de fotos 🖼');
+    });
+  }));
 
   /* ---------- Pestañas ---------- */
   let tabActual = 'invitados';
@@ -533,7 +574,8 @@
     if (prueba && !banner) { banner = document.createElement('div'); banner.id = 'bannerPrueba'; banner.className = 'banner-prueba'; banner.textContent = '🧪 Modo prueba prendido · acordate de apagarlo y de borrar los datos de prueba antes de mandar las invitaciones'; $('.barra-sup').after(banner); }
     if (!prueba && banner) banner.remove();
     $('#btnPausa').textContent = p.muro_pausado ? '▶ Reanudar muro' : '⏸ Pausar muro';
-    $('#estadoPantalla').textContent = (p.modo === 'trivia' ? 'Mostrando: trivia' : 'Mostrando: muro de fotos') + (p.muro_pausado ? ' · MURO EN PAUSA' : '') + (p.mensaje_manual ? ' · con mensaje' : '');
+    // lo que se ve en el salón lo dice la línea "En el salón ahora" (pintarEnVivo); acá solo avisos extra
+    $('#estadoPantalla').textContent = p.muro_pausado && p.modo !== 'trivia' ? '⏸ El muro está en pausa' : '';
   }
   $('#btnPausa').addEventListener('click', e => conBoton(e.currentTarget, async () => {
     await A.actualizarPantalla({ muro_pausado: !pantallaEstado.muro_pausado });

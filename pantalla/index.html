@@ -20,9 +20,18 @@
 
   <!-- ============ FOTOS ============ -->
   <main id="vistaFotos" class="vista">
+    <!-- Muro todavía sin fotos: que no se vea vacío -->
     <section id="vacio" class="vacio">
-      <p class="vacio-titulo script oro-brillante">¡Bienvenidos!</p>
-      <p class="vacio-texto serif">Sé el primero en subir una foto 📸<br>Escaneá el código y aparece acá al instante.</p>
+      <div class="emblema vacio-emblema" aria-label="60 · Silvia"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div>
+      <p class="vacio-titulo serif">¡Que empiece la fiesta! 🎉</p>
+      <div class="vacio-qr">
+        <div class="qr-grande" id="qrVacio"></div>
+        <div>
+          <p class="esquina-eyebrow">Escaneá con la cámara del celular</p>
+          <p class="vacio-qr-titulo serif"><span class="oro-txt">Subí la primera foto</span> 📸</p>
+          <p class="esquina-link" id="linkVacio"></p>
+        </div>
+      </div>
     </section>
     <!-- Collage de polaroids: las arma js/pantalla.js -->
     <section id="collage" class="collage oculto" aria-live="polite">

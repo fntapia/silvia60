@@ -2,6 +2,7 @@
 --   A) Datos del evento editables desde el panel (pestaña "Evento")
 --   B) Trivia final: preguntas de opción múltiple y de Verdadero o Falso, "dato al revelar",
 --      apodos en vivo en la pantalla y las 13 preguntas reales
+--   C) Pantalla a prueba de fallas: nunca un podio vacío (sin jugadores vuelve al muro de fotos)
 -- Correr UNA vez en SQL Editor → Run (sin nada seleccionado). Se puede repetir sin problema.
 -- NO borra ni cambia confirmaciones, fotos ni invitados.
 -- Las 5 preguntas de ejemplo se reemplazan por las 13 reales (una sola vez: si ya están, no se tocan).
@@ -156,9 +157,56 @@ begin
 end $$;
 
 -- =====================================================================
+-- C) PANTALLA A PRUEBA DE FALLAS
+-- =====================================================================
+-- Control del juego: si se llega al podio sin ningún jugador, en vez de un podio vacío
+-- se apaga la trivia y la pantalla vuelve al muro de fotos.
+create or replace function public.trivia_control(p_accion text) returns json
+language plpgsql security definer set search_path = public as $$
+declare e trivia_estado; v_total int; v_id uuid;
+begin
+  if not es_admin() then raise exception 'No autorizado'; end if;
+  select * into e from trivia_estado where id = 1 for update;
+  select count(*) into v_total from trivia_preguntas where activa;
+  if p_accion = 'abrir' then
+    update trivia_estado set partida = gen_random_uuid(), fase = 'lobby', pregunta_id = null, pregunta_num = 0, total = v_total, inicio = null, actualizado = now() where id = 1;
+    update pantalla_estado set modo = 'trivia' where id = 1;
+  elsif p_accion = 'siguiente' then
+    if e.partida is null then raise exception 'Primero abrí la trivia'; end if;
+    if e.pregunta_num >= v_total then
+      update trivia_estado set fase = 'podio', actualizado = now() where id = 1;
+    else
+      select id into v_id from trivia_preguntas where activa order by orden, creado offset e.pregunta_num limit 1;
+      update trivia_estado set fase = 'pregunta', pregunta_id = v_id, pregunta_num = e.pregunta_num + 1, total = v_total, inicio = now(), actualizado = now() where id = 1;
+    end if;
+  elsif p_accion = 'revelar' then update trivia_estado set fase = 'resultado', actualizado = now() where id = 1;
+  elsif p_accion = 'ranking' then update trivia_estado set fase = 'ranking', actualizado = now() where id = 1;
+  elsif p_accion = 'terminar' then update trivia_estado set fase = 'podio', actualizado = now() where id = 1;
+  elsif p_accion = 'cerrar' then
+    update trivia_estado set fase = 'apagada', actualizado = now() where id = 1;
+    update pantalla_estado set modo = 'fotos' where id = 1;
+  else raise exception 'Acción desconocida';
+  end if;
+  -- nunca un podio vacío
+  select * into e from trivia_estado where id = 1;
+  if e.fase = 'podio' and not exists (select 1 from trivia_jugadores where partida = e.partida) then
+    update trivia_estado set fase = 'apagada', actualizado = now() where id = 1;
+    update pantalla_estado set modo = 'fotos' where id = 1;
+  end if;
+  return (select row_to_json(t) from trivia_estado t where id = 1);
+end $$;
+
+-- Si ahora mismo quedó trabada en un podio sin jugadores (como en la prueba), se destraba
+update public.trivia_estado set fase = 'apagada', actualizado = now()
+where id = 1 and fase = 'podio' and not exists (select 1 from public.trivia_jugadores j where j.partida = trivia_estado.partida);
+update public.pantalla_estado set modo = 'fotos'
+where id = 1 and modo = 'trivia' and (select fase from public.trivia_estado where id = 1) = 'apagada';
+
+-- =====================================================================
 -- Comprobación (1 fila). Tiene que decir:
 --   fecha_y_hora_argentina = 2026-12-05 22:30 · limite_ok = true
---   preguntas = 13 · verdadero_falso = 4 · con_dato = 4 · apodos_ok = true · invitados / confirmaciones / fotos = lo que ya tenías
+--   preguntas = 13 · verdadero_falso = 4 · con_dato = 4 · apodos_ok = true · podio_seguro = true
+--   pantalla_modo = fotos y trivia_fase = apagada (salvo que tengas una trivia abierta) · invitados / confirmaciones / fotos = lo que ya tenías
 -- =====================================================================
 select
   (select fecha_evento at time zone 'America/Argentina/San_Juan' from public.evento_config where id = 1) as fecha_y_hora_argentina,
@@ -168,6 +216,9 @@ select
   (select count(*) from public.trivia_preguntas where tipo = 'vf') as verdadero_falso,
   (select count(*) from public.trivia_preguntas where dato is not null) as con_dato,
   (select json_typeof(public.trivia_apodos()) = 'array') as apodos_ok,
+  (select prosrc ilike '%nunca un podio vac%' from pg_proc where proname = 'trivia_control' and pronamespace = 'public'::regnamespace) as podio_seguro,
+  (select modo from public.pantalla_estado where id = 1) as pantalla_modo,
+  (select fase from public.trivia_estado where id = 1) as trivia_fase,
   (select count(*) from public.grupos) as invitados,
   (select count(*) from public.rsvps) as confirmaciones,
   (select count(*) from public.fotos) as fotos;

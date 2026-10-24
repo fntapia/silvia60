@@ -92,6 +92,18 @@
     const segundos = Math.floor(ms / 1e3);
     return { dias, horas, minutos, segundos };
   }
+  // --- Pantalla a prueba de fallas: ¿la trivia sigue a la vista o la pantalla vuelve sola al muro? ---
+  // Lo usan /pantalla (para volver sola) y el panel (para decir qué se está viendo en el salón).
+  //   · podio sin jugadores → muro al instante
+  //   · podio 60 s, ranking 90 s, cualquier otra fase 3 min sin cambios → muro
+  const LIMITE_FASE = { podio: 60e3, ranking: 90e3 }, LIMITE_OTRAS = 180e3;
+  function triviaAlMuro(fase, edadMs, jugadores) {
+    if (!fase || fase === 'apagada') return 'apagada';
+    if (fase === 'podio' && jugadores === 0) return 'podio sin jugadores';
+    if (edadMs > (LIMITE_FASE[fase] || LIMITE_OTRAS)) return 'tiempo';
+    return '';
+  }
+
   // modoPrueba: lo prende el admin desde el panel (Pantalla → Modo prueba) para probar /fotos antes del día
   function fotosHabilitadas(modoPrueba) {
     if (modoPrueba || new URLSearchParams(location.search).has('prueba')) return true;
@@ -367,5 +379,5 @@
 
   derivarEvento();   // textos de fecha/hora desde config.js hasta que llegue lo de la base
 
-  window.S60 = { $, $$, esc, local, uuid, idDispositivo, toast, url, urlMaps, fechaEvento, partesRestantes, fotosHabilitadas, modoPruebaActivo, cargarEvento, aplicarEvento, derivarEvento, rsvpAbierto, urlGoogleCalendar, descargarIcs, descargarArchivo, urlWhatsApp, normalizarTelefono, slugificar, sufijoAleatorio, tieneMalasPalabras, qrSvg, brillos, lluviaDorada, confetiDorado, fiesta, destellos, corazones, cargarImagen, comprimir, bannerDemo, formatoHora, formatoFechaHora, primerNombre };
+  window.S60 = { $, $$, esc, local, uuid, idDispositivo, toast, url, urlMaps, fechaEvento, partesRestantes, triviaAlMuro, fotosHabilitadas, modoPruebaActivo, cargarEvento, aplicarEvento, derivarEvento, rsvpAbierto, urlGoogleCalendar, descargarIcs, descargarArchivo, urlWhatsApp, normalizarTelefono, slugificar, sufijoAleatorio, tieneMalasPalabras, qrSvg, brillos, lluviaDorada, confetiDorado, fiesta, destellos, corazones, cargarImagen, comprimir, bannerDemo, formatoHora, formatoFechaHora, primerNombre };
 })();
