@@ -28,6 +28,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) mantenerEncendida(); });
   $('#iniciar').addEventListener('click', async () => {
     $('#iniciar').classList.add('oculto');
+    Show.desbloquear();                 // este toque habilita el sonido de videos y efectos
     try { await document.documentElement.requestFullscreen(); } catch (e) {}
     mantenerEncendida();
   });
@@ -106,7 +107,7 @@
   let zTop = 10;
   let ocupado = false;            // hay una foto nueva, un zoom o una lluvia en curso
   const collage = $('#collage');
-  const muroActivo = () => !triviaVisible() && !pantalla.muro_pausado && !(pantalla.mensaje_manual || '').trim() && !document.hidden;
+  const muroActivo = () => !Show.activo() && !triviaVisible() && !pantalla.muro_pausado && !(pantalla.mensaje_manual || '').trim() && !document.hidden;
   const pie = f => `📸 ${esc(f.autor)}${f.leyenda ? ' · ' + esc(f.leyenda) : ''}`;
   const base = g => `translate(-50%, -50%) rotate(${g}deg)`;
 
@@ -285,6 +286,7 @@
     $('#manualTexto').textContent = manual;
     if (pantalla.muro_pausado || manual) $('#mensaje').classList.add('oculto');
     aplicarModo();
+    Show.aplicar(pantalla);             // videos y animaciones (tapan todo mientras duran)
   }
   function aplicarModo() {
     const enTrivia = triviaVisible();
@@ -517,8 +519,9 @@
 
   /* ---------- Arranque ---------- */
   (async function iniciar() {
-    try { aplicarPantalla(await Datos.pantalla()); } catch (e) {}
     await medirDesfase();
+    Show.iniciar({ desfase: () => desfase, alCambiar: () => { if (Show.activo()) $('#mensaje').classList.add('oculto'); } });
+    try { aplicarPantalla(await Datos.pantalla()); } catch (e) {}
     try { trivia = await Datos.trivia.estado(); } catch (e) {}
     await sincronizarFotos(true);
     await cargarMensajes();
@@ -544,7 +547,7 @@
     // Recarga preventiva cada 6 h (libera memoria del navegador), solo si no hay trivia en curso
     setTimeout(function recargar() {
       // Con F11 la pantalla completa sobrevive a la recarga; con el botón no, así que en ese caso no se recarga
-      if (navigator.onLine && !triviaVisible() && !document.fullscreenElement) location.replace(location.pathname + '?sinInicio=1');
+      if (navigator.onLine && !triviaVisible() && !Show.activo() && !document.fullscreenElement) location.replace(location.pathname + '?sinInicio=1');
       else setTimeout(recargar, 60000);
     }, 6 * 3600e3);
   })();

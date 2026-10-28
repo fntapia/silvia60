@@ -20,6 +20,42 @@
     const f = Math.min(1, Math.max(0, ms / (duracionSeg * 1000)));
     return Math.round(500 + 500 * (1 - f));
   }
+  // Un momento del itinerario, tal como se guarda (la hora de inicio no se guarda: se calcula en cadena)
+  function filaItem(it) {
+    const txt = (s, max) => { const t = String(s == null ? '' : s).trim().slice(0, max); return t || null; };
+    return {
+      orden: it.orden || 1, emoji: txt(it.emoji, 16) || '⭐', titulo: txt(it.titulo, 80) || 'Momento',
+      duracion: Math.max(0, Math.min(600, parseInt(it.duracion, 10) || 0)), hora_fija: it.hora_fija || null,
+      responsable: txt(it.responsable, 80), notas: txt(it.notas, 300), boton: it.boton || null, hecho: !!it.hecho
+    };
+  }
+  const CONFIG_ITINERARIO = { id: 1, duracion_horas: 7, fotografa_desde: 25, fotografa_horas: 3 };
+  // Mismo itinerario inicial que supabase/actualizacion-4.sql (para el modo demo)
+  const ITINERARIO_INICIAL = [
+    ['🚪', 'Apertura del salón', 30, null, 'Llegan invitados; muro de fotos', null],
+    ['✨', 'Llega Silvia', 15, null, 'Animación de entrada + su canción, flores de los hijos y vals', 'entrada'],
+    ['🎂', 'Bienvenida y velas', 10, null, 'Palabras breves, brindis, sopla la vela', null],
+    ['🍽️', 'Cena', 45, null, 'Silvia recorre las mesas (foto por mesa)', null],
+    ['🎬', 'Video homenaje', 10, null, null, 'video:homenaje'],
+    ['🏆', 'Trivia', 20, null, 'Con la gente sentada', 'trivia'],
+    ['🍰', 'Postre: torta', 15, null, null, null],
+    ['🪕', 'Folklore', 10, null, '2 canciones', null],
+    ['👨‍👩‍👧‍👦', 'Coreografía familiar', 5, null, 'Cubre el cambio de vestuario', null],
+    ['🌹', 'Tango', 10, null, 'Al final sacan a bailar a Silvia y la familia', null],
+    ['🚨', '¡Arranca la fiesta!', 5, null, 'ALERTA en pantalla + el DJ dispara el mashup en el BOOM; abre la barra', 'fiesta'],
+    ['🕺', 'Primera tanda de baile', 65, null, null, null],
+    ['🎊', 'Animación', 60, '01:00', null, null],
+    ['🥪', 'Madrugada', 30, null, 'Mesa dulce + sándwiches / pizza', null],
+    ['🎶', 'Última tanda', 85, null, null, null],
+    ['👋', 'Cierre', 5, null, null, null]
+  ];
+  // Si falta correr el SQL nuevo, un aviso claro en vez de un error técnico
+  function errorSql4(e) {
+    const m = (e && e.message) || String(e);
+    const err = new Error(/does not exist|schema cache|could not find/i.test(m) ? 'Falta correr supabase/actualizacion-4.sql en Supabase' : m);
+    err.faltaSql = /actualizacion-4/.test(err.message);
+    return err;
+  }
 
   /* ======================= SUPABASE ======================= */
   function backendSupabase() {
@@ -111,6 +147,15 @@
         return data;
       },
       escucharPantalla: (cb, alEstado) => escucharTabla('pantalla_estado', ev => cb(ev.fila), alEstado),
+      // Videos que la notebook del salón tiene que tener cargados (los archivos quedan en la notebook, no acá)
+      async videos() {
+        const s = await db();
+        const { data, error } = await s.from('videos').select('*').order('orden').order('creado');
+        if (error) throw errorSql4(error);
+        return data;
+      },
+      // La pantalla (sin login) avisa qué videos tiene y qué está reproduciendo
+      informarPantalla: p => rpc('pantalla_informar', { p }),
       trivia: {
         async estado() {
           const s = await db();
@@ -200,7 +245,45 @@
         async actualizarPantalla(cambios) {
           const s = await db();
           const { error } = await s.from('pantalla_estado').update(cambios).eq('id', 1);
-          if (error) throw traducirError(error);
+          if (error) throw /reproduccion|volumen|efectos|sonido_ts|informe/.test(error.message) ? errorSql4({ message: 'does not exist' }) : traducirError(error);
+        },
+        /* ---- Itinerario (solo admin) ---- */
+        async itinerario() {
+          const s = await db();
+          const [a, b] = await Promise.all([
+            s.from('itinerario').select('*').order('orden').order('creado'),
+            s.from('itinerario_config').select('*').eq('id', 1).maybeSingle()
+          ]);
+          if (a.error || b.error) throw errorSql4(a.error || b.error);
+          return { items: a.data, config: b.data || Object.assign({}, CONFIG_ITINERARIO) };
+        },
+        async guardarItem(it) {
+          const s = await db();
+          const fila = filaItem(it);
+          const { data, error } = it.id ? await s.from('itinerario').update(fila).eq('id', it.id).select().single() : await s.from('itinerario').insert(fila).select().single();
+          if (error) throw errorSql4(error);
+          return data;
+        },
+        async borrarItem(id) {
+          const s = await db();
+          const { error } = await s.from('itinerario').delete().eq('id', id);
+          if (error) throw errorSql4(error);
+        },
+        async guardarItinerarioConfig(c) {
+          const s = await db();
+          const { error } = await s.from('itinerario_config').upsert(Object.assign({ id: 1 }, c));
+          if (error) throw errorSql4(error);
+        },
+        /* ---- Videos de la pantalla ---- */
+        async guardarVideo(v) {
+          const s = await db();
+          const { error } = await s.from('videos').upsert({ id: v.id, titulo: v.titulo, youtube: v.youtube || null, fijo: !!v.fijo, orden: v.orden || 1 });
+          if (error) throw errorSql4(error);
+        },
+        async borrarVideo(id) {
+          const s = await db();
+          const { error } = await s.from('videos').delete().eq('id', id).eq('fijo', false);
+          if (error) throw errorSql4(error);
         },
         async guardarEvento(cambios) {
           const s = await db();
@@ -295,9 +378,21 @@
         trivia_jugadores: [], trivia_respuestas: []
       };
     }
+    // Lo nuevo de la actualización 4 (itinerario, videos, control de la pantalla), también para demos ya guardados
+    function completar(d) {
+      if (!d.itinerario) {
+        const ahora = new Date().toISOString();
+        d.itinerario = ITINERARIO_INICIAL.map(([emoji, titulo, duracion, hora_fija, notas, boton], i) =>
+          Object.assign({ id: crypto.randomUUID(), creado: ahora }, filaItem({ orden: i + 1, emoji, titulo, duracion, hora_fija, notas, boton })));
+      }
+      if (!d.itinerario_config) d.itinerario_config = Object.assign({}, CONFIG_ITINERARIO);
+      if (!d.videos) d.videos = [{ id: 'homenaje', titulo: 'Video homenaje', youtube: null, fijo: true, orden: 1, creado: new Date().toISOString() }];
+      d.pantalla = Object.assign({ reproduccion: null, volumen: 100, efectos: true, sonido_ts: null, informe: null }, d.pantalla);
+      return d;
+    }
     function leer() {
-      try { const d = JSON.parse(localStorage.getItem(CLAVE)); if (d && d.grupos) return d; } catch (e) {}
-      const d = semilla(); guardar(d); return d;
+      try { const d = JSON.parse(localStorage.getItem(CLAVE)); if (d && d.grupos) return completar(d); } catch (e) {}
+      const d = completar(semilla()); guardar(d); return d;
     }
     function guardar(d) { localStorage.setItem(CLAVE, JSON.stringify(d)); }
     function cambiar(fn) { const d = leer(); const r = fn(d); guardar(d); return r; }
@@ -457,6 +552,11 @@
       async pantalla() { return leer().pantalla; },
       async evento() { return leer().evento || null; },
       escucharPantalla(cb, alEstado) { setTimeout(() => alEstado && alEstado(true), 50); return oyente('pantalla_estado', ev => cb(ev.fila)); },
+      async videos() { return leer().videos.slice().sort((a, b) => a.orden - b.orden || a.creado.localeCompare(b.creado)); },
+      async informarPantalla(p) {
+        const fila = cambiar(d => Object.assign(d.pantalla, { informe: { videos: p.videos || [], reproduciendo: p.reproduciendo || null, audio: p.audio || null, ts: new Date().toISOString() } }));
+        avisar({ tabla: 'pantalla_estado', tipo: 'UPDATE', fila });
+      },
       trivia: {
         async estado() { return leer().trivia_estado; },
         escuchar(cb, alEstado) { setTimeout(() => alEstado && alEstado(true), 50); return oyente('trivia_estado', ev => cb(ev.fila)); },
@@ -579,6 +679,32 @@
           exigirAdmin();
           cambiar(d => { d.evento = Object.assign(d.evento || {}, cambios); });
         },
+        async itinerario() {
+          exigirAdmin();
+          const d = leer();
+          return { items: d.itinerario.slice().sort((a, b) => a.orden - b.orden || a.creado.localeCompare(b.creado)), config: Object.assign({}, d.itinerario_config) };
+        },
+        async guardarItem(it) {
+          exigirAdmin();
+          return cambiar(d => {
+            const fila = filaItem(it);
+            if (it.id) return Object.assign(d.itinerario.find(x => x.id === it.id), fila);
+            const nuevo = Object.assign({ id: crypto.randomUUID(), creado: new Date().toISOString() }, fila);
+            d.itinerario.push(nuevo);
+            return nuevo;
+          });
+        },
+        async borrarItem(id) { exigirAdmin(); cambiar(d => { d.itinerario = d.itinerario.filter(x => x.id !== id); }); },
+        async guardarItinerarioConfig(c) { exigirAdmin(); cambiar(d => { Object.assign(d.itinerario_config, c); }); },
+        async guardarVideo(v) {
+          exigirAdmin();
+          cambiar(d => {
+            const fila = { id: v.id, titulo: v.titulo, youtube: v.youtube || null, fijo: !!v.fijo, orden: v.orden || 1 };
+            const e = d.videos.find(x => x.id === v.id);
+            if (e) Object.assign(e, fila); else d.videos.push(Object.assign({ creado: new Date().toISOString() }, fila));
+          });
+        },
+        async borrarVideo(id) { exigirAdmin(); cambiar(d => { d.videos = d.videos.filter(x => x.id !== id || x.fijo); }); },
         async borrarDatosPrueba() {
           exigirAdmin();
           const r = cambiar(d => {

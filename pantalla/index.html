@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/trivia.css">
   <link rel="stylesheet" href="../css/pantalla.css">
+  <link rel="stylesheet" href="../css/show.css">
 </head>
 <body class="pantalla">
   <canvas class="brillos" id="brillos" aria-hidden="true"></canvas>
@@ -121,6 +122,56 @@
 
   <div class="conexion oculto" id="conexion">Reconectando…</div>
 
+  <!-- ============ VIDEO (archivo de esta notebook o YouTube) ============ -->
+  <div class="cine oculto" id="cine"><video id="cineVideo" class="oculto" playsinline preload="auto"></video><div id="cineYt" class="oculto"></div></div>
+
+  <!-- ============ ✨ ENTRADA DE SILVIA ============ -->
+  <section class="show show-entrada oculto" id="showEntrada" aria-hidden="true">
+    <canvas class="show-chispas"></canvas>
+    <div class="se-luz"></div>
+    <p class="se-linea l1">Señoras y señores…</p>
+    <p class="se-linea l2">…esta noche celebramos 60 años<br>de amor, risas y familia…</p>
+    <p class="se-linea l3">¡con ustedes…</p>
+    <div class="se-final">
+      <img class="se-foto" src="../assets/silvia-portada.webp" alt="">
+      <div class="se-textos">
+        <h1 class="se-nombre">SILVIA</h1>
+        <div class="emblema se-emblema"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 🚨 ¡ARRANCA LA FIESTA! ============ -->
+  <section class="show show-fiesta oculto" id="showFiesta" aria-hidden="true">
+    <div class="sf-balizas"><i class="baliza b1"></i><i class="baliza b2"></i></div>
+    <div class="sf-billetes"></div>
+    <div class="sf-escena">
+      <p class="sf-alerta">🚨 ¡ALERTA! 🚨</p>
+      <p class="sf-atencion">¡ATENCIÓN SAN JUAN!<span>SE VIENE LA FIESTA DE SILVIA</span></p>
+      <p class="sf-cuenta"></p>
+      <p class="sf-boom">💥 BOOM 💥</p>
+    </div>
+    <div class="sf-final">
+      <div class="emblema"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div>
+      <h1>¡QUE EMPIECE<br>LA FIESTA!</h1>
+    </div>
+    <div class="sf-flash"></div>
+  </section>
+
+  <div class="sin-sonido oculto" id="sinSonido">🔇 Tocá la pantalla para activar el sonido</div>
+
+  <!-- ============ ⚙ PREPARAR VIDEOS (?preparar=1 o 2 s apretando la esquina de arriba a la izquierda) ============ -->
+  <div class="preparar oculto" id="preparar" role="dialog" aria-modal="true" aria-labelledby="prepTitulo">
+    <div class="prep-caja">
+      <div class="prep-cab"><h1 id="prepTitulo">⚙ Preparar videos</h1><button class="prep-btn oro" id="prepCerrar" type="button">✔ Listo</button></div>
+      <p>Los videos se guardan <b>en esta notebook</b> (no se suben a internet). Hacelo <b>una vez</b>, unos días antes, en el <b>mismo Chrome</b> que vas a usar en la fiesta (no en modo incógnito). Formato recomendado: <b>MP4 (H.264)</b>.</p>
+      <p class="prep-espacio" id="prepEspacio"></p>
+      <p class="prep-error" id="prepError"></p>
+      <div id="prepLista"></div>
+      <video id="prepPrueba" class="oculto" controls playsinline></video>
+    </div>
+  </div>
+
   <button class="iniciar" id="iniciar" type="button">
     <span class="script oro-brillante">Silvia 60</span>
     <span class="serif">Tocá para empezar en pantalla completa</span>
@@ -131,6 +182,7 @@
   <script src="../config.js"></script>
   <script src="../js/comun.js"></script>
   <script src="../js/datos.js"></script>
+  <script src="../js/show.js"></script>
   <script src="../js/pantalla.js"></script>
 </body>
 </html>

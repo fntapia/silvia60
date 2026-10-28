@@ -35,6 +35,9 @@
       <div class="menu-sup">
         <button class="btn-menu" id="btnMenu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Menú">☰</button>
         <div class="menu-lista oculto" id="menuLista" role="menu">
+          <button role="menuitem" type="button" data-tab="fotos">📸 Fotos (galería)</button>
+          <button role="menuitem" type="button" data-tab="evento">🗓 Evento (fecha y hora)</button>
+          <hr class="menu-sep">
           <a role="menuitem" href="../pantalla/" target="_blank" rel="noopener">📺 Abrir pantalla del salón ↗</a>
           <a role="menuitem" href="../" target="_blank" rel="noopener">💌 Ver la invitación ↗</a>
           <a role="menuitem" href="../fotos/" target="_blank" rel="noopener">📸 Abrir /fotos ↗</a>
@@ -47,11 +50,13 @@
     <nav class="pestanas" id="pestanas" role="tablist">
       <button role="tab" data-tab="invitados" aria-selected="true"><span aria-hidden="true">👥</span><b>Invitados</b></button>
       <button role="tab" data-tab="confirmaciones"><span aria-hidden="true">✅</span><b>Confirmados</b></button>
-      <button role="tab" data-tab="fotos"><span aria-hidden="true">📸</span><b>Fotos</b></button>
+      <button role="tab" data-tab="itinerario"><span aria-hidden="true">🕒</span><b>Itinerario</b></button>
       <button role="tab" data-tab="pantalla"><span aria-hidden="true">📺</span><b>Pantalla</b></button>
+      <button role="tab" data-tab="videos"><span aria-hidden="true">🎬</span><b>Videos</b></button>
       <button role="tab" data-tab="trivia"><span aria-hidden="true">🎯</span><b>Trivia</b></button>
-      <button role="tab" data-tab="evento"><span aria-hidden="true">🗓</span><b>Evento</b></button>
     </nav>
+    <!-- Cuenta para el DJ después de lanzar "¡Arranca la fiesta!" -->
+    <div class="boom-cuenta oculto" id="boomCuenta" role="status" aria-live="assertive"></div>
 
     <main class="contenido-panel">
       <!-- INVITADOS -->
@@ -125,6 +130,37 @@
         <div class="galeria" id="galeria"></div>
       </section>
 
+      <!-- ITINERARIO: horas encadenadas (inicio del evento + duraciones) -->
+      <section class="tab oculto" id="tab-itinerario">
+        <div class="fila-titulo">
+          <h2 class="titulo">Itinerario</h2>
+          <button class="btn btn-chico" id="btnCopiarItinerario" type="button">📋 Copiar como texto</button>
+        </div>
+        <div class="aviso-sql oculto" id="itiAviso"></div>
+        <div id="itiCuerpo">
+          <div class="iti-resumen">
+            <p class="iti-horas" id="itiHoras"></p>
+            <div class="iti-contratado">
+              <label>Contratado <input type="number" id="itiContratada" min="1" max="14" step="0.5" inputmode="decimal"> h</label>
+              <span class="chico suave">La hora de inicio se cambia en ☰ → Evento</span>
+            </div>
+            <p class="iti-aviso-fin" id="itiAvisoFin"></p>
+          </div>
+          <div class="iti-ahora oculto" id="itiAhora"></div>
+          <div class="iti-foto">
+            <p class="iti-foto-tit">📷 Fotógrafa</p>
+            <div class="iti-foto-campos">
+              <label>Desde <input type="time" id="itiFotoDesde" step="300"></label>
+              <label>Horas <input type="number" id="itiFotoHoras" min="0" max="14" step="0.5" inputmode="decimal"></label>
+            </div>
+            <div class="iti-barra" id="itiBarra" aria-hidden="true"></div>
+            <p class="chico" id="itiFotoCubre"></p>
+          </div>
+          <div class="iti-lista" id="itiLista"></div>
+          <button class="btn btn-oro btn-bloque" id="btnNuevoMomento" type="button">+ Agregar momento</button>
+        </div>
+      </section>
+
       <!-- PANTALLA: control remoto -->
       <section class="tab oculto" id="tab-pantalla">
         <h2 class="titulo">Pantalla del salón</h2>
@@ -153,6 +189,57 @@
           <p class="suave chico"><b>Borrar datos de prueba</b> deja todo limpio para el envío real: borra <b>todas</b> las confirmaciones, <b>todas</b> las fotos y los jugadores de la trivia. <b>No</b> toca la lista de invitados ni las preguntas.</p>
           <button class="btn btn-peligro btn-bloque" id="btnBorrarPrueba" type="button">🗑 Borrar datos de prueba</button>
           <p class="suave chico" id="borrarProgreso"></p>
+        </div>
+        <div class="volver-muro"><button class="btn btn-oro btn-bloque btn-volver-muro" type="button">🖼 Volver al muro de fotos</button></div>
+      </section>
+
+      <!-- VIDEOS Y ANIMACIONES: controlar la pantalla desde el celular -->
+      <section class="tab oculto" id="tab-videos">
+        <h2 class="titulo">Videos y animaciones</h2>
+        <p class="en-vivo"><span class="punto" aria-hidden="true"></span><span>En el salón ahora: <b class="en-vivo-txt">…</b></span></p>
+        <div class="aviso-sql oculto" id="vidAviso"></div>
+        <div class="vid-notebook" id="vidNotebook"></div>
+        <h3 class="subtitulo">🎬 Videos</h3>
+        <div class="vid-lista" id="listaVideos"></div>
+        <button class="btn btn-bloque" id="btnNuevoVideo" type="button">+ Agregar video</button>
+        <form class="tarjeta form-video oculto" id="formVideo">
+          <h3 class="subtitulo" id="tituloFormVideo">Nuevo video</h3>
+          <input type="hidden" name="id">
+          <label class="campo"><span>Título</span><input type="text" name="titulo" maxlength="80" required placeholder="Fotos de la familia"></label>
+          <label class="campo"><span>Link de YouTube no listado <small>(opcional, por si prefieren)</small></span><input type="url" name="youtube" maxlength="200" placeholder="https://youtu.be/…" autocapitalize="off"></label>
+          <p class="chico suave">⚠️ YouTube necesita buena conexión en el salón. Si el archivo está cargado en la notebook, se usa el archivo.</p>
+          <div class="fila-botones dos">
+            <button class="btn btn-oro" type="submit">Guardar</button>
+            <button class="btn" type="button" id="btnCancelarVideo">Cancelar</button>
+          </div>
+        </form>
+        <p class="chico suave vid-ayuda">📂 Los archivos se cargan <b>una vez</b> en la notebook del salón: abrí <code>/pantalla/?preparar=1</code> (o mantené apretada 2 segundos la esquina de arriba a la izquierda de la pantalla) → <b>Elegir archivo</b>. Recomendado: MP4 (H.264).</p>
+
+        <h3 class="subtitulo">✨ Animaciones</h3>
+        <div class="vid-lista">
+          <article class="vid-card anim-card" data-anim="entrada">
+            <div class="vid-cab"><h4>✨ Entrada de Silvia</h4><span class="pill sin vid-estado">Lista</span></div>
+            <p class="chico suave">Elegante, ~25 s, sin música (la canción la pone el DJ). Queda en el cuadro final hasta que toques ⏹.</p>
+            <div class="vid-botones">
+              <button class="btn btn-oro" data-a="anim-play" type="button">▶ Lanzar</button>
+              <button class="btn" data-a="parar" type="button">⏹ Volver al muro</button>
+            </div>
+          </article>
+          <article class="vid-card anim-card" data-anim="fiesta">
+            <div class="vid-cab"><h4>🚨 ¡Arranca la fiesta!</h4><span class="pill sin vid-estado">Lista</span></div>
+            <p class="chico"><b>🎧 El DJ dispara el mashup en el BOOM, 8 s después de tocar ▶.</b> <span class="suave">La pantalla no pasa música: sirena, cuenta 3‑2‑1, BOOM y lluvia de Silvidólares (~20 s). Después vuelve sola al muro.</span></p>
+            <div class="vid-botones">
+              <button class="btn btn-oro" data-a="anim-play" type="button">▶ Alerta</button>
+              <button class="btn" data-a="parar" type="button">⏹ Volver al muro</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="tarjeta vid-sonido">
+          <h3 class="subtitulo">🔊 Sonido de la pantalla</h3>
+          <label class="vol"><span>Volumen</span><input type="range" id="vidVolumen" min="0" max="100" step="5"><b id="vidVolumenTxt">100%</b></label>
+          <label class="check interruptor"><input type="checkbox" id="vidEfectos"> <span>🔊 Efectos de sonido de la pantalla</span></label>
+          <button class="btn btn-bloque" id="btnProbarSonido" type="button">🔔 Probar sonido</button>
         </div>
         <div class="volver-muro"><button class="btn btn-oro btn-bloque btn-volver-muro" type="button">🖼 Volver al muro de fotos</button></div>
       </section>
@@ -195,6 +282,32 @@
         </form>
       </section>
     </main>
+  </div>
+
+  <!-- Editor de un momento del itinerario -->
+  <div class="modal oculto" id="modalMomento" role="dialog" aria-modal="true" aria-labelledby="tituloMomento">
+    <form class="tarjeta modal-caja" id="formMomento">
+      <h3 class="titulo" id="tituloMomento">Momento</h3>
+      <input type="hidden" name="id">
+      <div class="grilla-momento">
+        <label class="campo"><span>Emoji</span><input type="text" name="emoji" maxlength="16" placeholder="⭐"></label>
+        <label class="campo"><span>Título</span><input type="text" name="titulo" maxlength="80" required placeholder="Vals"></label>
+      </div>
+      <div class="grilla-form">
+        <label class="campo campo-chico"><span>Duración (min)</span><input type="number" name="duracion" min="0" max="600" step="5" inputmode="numeric" required></label>
+        <label class="campo"><span>Responsable <small>(opcional)</small></span><input type="text" name="responsable" maxlength="80" placeholder="DJ / Salón / Hijos"></label>
+      </div>
+      <label class="check"><input type="checkbox" name="fija"> <span>📌 Hora fija (no se mueve: la cadena sigue desde esta hora)</span></label>
+      <label class="campo oculto" id="campoHoraFija"><span>Hora fija</span><input type="time" name="hora_fija" step="300"></label>
+      <label class="campo"><span>Notas <small>(opcional)</small></span><textarea name="notas" maxlength="300" rows="2"></textarea></label>
+      <label class="campo"><span>Botón rápido en la tarjeta</span><select name="boton"></select></label>
+      <p class="error-form" id="errorMomento" role="alert"></p>
+      <div class="fila-botones dos">
+        <button class="btn btn-oro" type="submit">Guardar</button>
+        <button class="btn" type="button" id="btnCancelarMomento">Cancelar</button>
+      </div>
+      <button class="btn btn-peligro btn-bloque btn-borrar-momento" type="button" id="btnBorrarMomento">🗑 Borrar este momento</button>
+    </form>
   </div>
 
   <!-- Editor de pregunta -->

@@ -103,6 +103,27 @@ Entrá a `.../silvia60/panel/` con tu email y contraseña → **Invitados**:
 ### ✔ Fecha y hora (se cambian desde el panel)
 Panel → **Evento**: fecha, hora, el texto de puntualidad y hasta cuándo se puede confirmar. Tocás **Guardar y aplicar** y se actualiza al instante en la invitación, la cuenta regresiva, «Agendar», /fotos (se habilita 2 h antes) y la pantalla, sin volver a subir nada a GitHub. La imagen de WhatsApp no tiene la hora, así que no hace falta regenerarla. (Requiere haber corrido `supabase/actualizacion-3.sql` una vez; `config.js` queda como respaldo.)
 
+### ✔ Itinerario de la fiesta (panel → 🕒 Itinerario)
+(Requiere haber corrido `supabase/actualizacion-4.sql` una vez.)
+- Cada momento tiene **duración**: la hora de inicio se calcula sola en cadena desde la hora del evento. Si cambiás la hora en ☰ → **Evento**, una duración (botones **−5 / +5**), el orden (**▲ ▼**) o agregás/borrás algo, todo se recalcula al instante.
+- **Hora fija** (✏️ → «📌 Hora fija»): ese momento no se mueve (ej. la Animación a la 01:00). Si lo anterior llega antes, avisa «⏳ Sobran 20 min»; si se pasa, «⚠️ Faltan 10 min: acortá algo antes».
+- Arriba: inicio, fin y total, y si coincide con las horas **contratadas** (7 h, editable).
+- **📷 Fotógrafa**: poné desde qué hora y cuántas horas; marca qué momentos cubre.
+- El día de la fiesta muestra **AHORA** y **PRÓXIMO en 12 min**. Tildá **✔** lo que ya pasó.
+- **📋 Copiar como texto** → pegalo en WhatsApp para la familia, el salón, la animación y la fotógrafa.
+- Algunas tarjetas tienen un **botón rápido** (Entrada de Silvia, Video homenaje, Abrir trivia, Alerta): pide confirmación y lo lanza en la pantalla.
+
+### ☐ Videos para la pantalla (panel → 🎬 Videos)
+Supabase gratis no acepta archivos grandes y pasar videos por internet en el salón es riesgoso, así que **los videos se guardan en la notebook del salón**:
+1. Unos días antes, en **esa notebook** y en el **mismo Chrome** de la fiesta (no incógnito), abrí `.../silvia60/pantalla/?preparar=1` (o mantené apretada 2 segundos la esquina de arriba a la izquierda de la pantalla).
+2. En «Video homenaje» tocá **📂 Elegir archivo**. Formato recomendado: **MP4 (H.264)**. Si el navegador no lo puede reproducir, avisa. Tocá **▶ Probar** para verlo.
+3. En el panel → **Videos** tiene que decir «✅ Cargado en la pantalla (tamaño · duración)».
+- **+ Agregar video**: título (y, si querés, un link de YouTube **no listado** como alternativa; necesita buena conexión). Después cargá el archivo en la notebook igual que arriba.
+- Desde el celular: **▶ Reproducir**, **⏸ Pausa / ▶ Seguir**, **⏹ Volver al muro** y el **volumen**. Al terminar el video, la pantalla vuelve sola al muro. Si la pantalla se recarga, sigue donde iba.
+- **Animaciones** (no necesitan archivos): **✨ Entrada de Silvia** (queda en el cuadro final hasta ⏹) y **🚨 ¡Arranca la fiesta!** (vuelve sola al muro). **El DJ dispara el mashup en el BOOM, que es 8 s después de tocar ▶** (el panel muestra la cuenta «BOOM en 3…»). La pantalla no pasa música.
+- **🔊 Efectos de sonido** (sirena, BOOM, destellos) se pueden apagar; **Probar sonido** hace sonar la notebook.
+- ⚠️ **Sonido**: los navegadores no dejan sonar nada hasta que alguien toca la pantalla. Por eso, al abrir `/pantalla/` tocá «Tocá para empezar». Si la página se recargó sola y aparece «🔇 Tocá la pantalla para activar el sonido», dale un clic en la notebook.
+
 ### ☐ Preguntas de la trivia
 Panel → **Trivia** → hay 5 de ejemplo. Editalas con las respuestas reales y agregá hasta 10–15. Podés poner una foto en cada pregunta.
 
@@ -134,13 +155,13 @@ El plan gratis **pausa el proyecto si pasa 1 semana sin uso**. Entre el 20/11 (c
 
 ## El día de la fiesta
 
-> 🛟 **Si la pantalla se traba:** en el panel (pestaña **Pantalla** o **Trivia**) tocá **🖼 Volver al muro de fotos**. Igual, la pantalla vuelve sola al muro: después del podio (60 s), del ranking (90 s) o si la trivia queda 3 minutos sin cambios. Arriba de esas pestañas, **«En el salón ahora»** te dice qué se está viendo.
+> 🛟 **Si la pantalla se traba:** en el panel (pestaña **Pantalla**, **Videos** o **Trivia**) tocá **🖼 Volver al muro de fotos** (también corta un video o una animación). Igual, la pantalla vuelve sola al muro: después del podio (60 s), del ranking (90 s) o si la trivia queda 3 minutos sin cambios. Arriba de esas pestañas, **«En el salón ahora»** te dice qué se está viendo.
 
 **En la notebook del salón (la que va al proyector o TV):**
 1. Enchufala a la corriente. En Windows: **Configuración → Sistema → Energía** → que la pantalla y la suspensión estén en **Nunca**.
 2. Conectala a internet: si el salón no tiene buen Wi-Fi, usá un celular con **datos compartidos** (hotspot). Llevá uno de respaldo.
-3. Abrí Chrome en `https://fntapia.github.io/silvia60/pantalla/`, tocá la pantalla y apretá **F11** (pantalla completa).
-4. En tu celular dejá abierto el **panel** para ocultar fotos, pausar el muro, mostrar mensajes («¡En 5 minutos la torta! 🎂») y manejar la trivia.
+3. Abrí Chrome en `https://fntapia.github.io/silvia60/pantalla/`, tocá la pantalla y apretá **F11** (pantalla completa). Ese toque también habilita el sonido de videos y animaciones. Conectá el audio de la notebook al equipo del salón/DJ si el video homenaje tiene sonido.
+4. En tu celular dejá abierto el **panel**: el **🕒 Itinerario** te dice qué sigue, y desde **🎬 Videos** lanzás la entrada de Silvia, el video homenaje y la alerta. También ocultás fotos, pausás el muro, mostrás mensajes («¡En 5 minutos la torta! 🎂») y manejás la trivia. Fotos (galería) y Evento quedaron en el menú ☰.
 
 **Si se corta internet:**
 - La pantalla **sigue mostrando** las fotos que ya cargó y arriba dice «Reconectando…». Cuando vuelve internet, se pone al día sola. No hay que tocar nada.

@@ -543,4 +543,102 @@ select orden, tipo, texto, opciones::jsonb, correcta, dato from (values
 ) as v(orden, tipo, texto, opciones, correcta, dato)
 where not exists (select 1 from public.trivia_preguntas);
 
+-- ---------------------------------------------------------------------
+-- Itinerario (solo admin) y videos / animaciones de la pantalla
+-- (lo mismo que supabase/actualizacion-4.sql, para una instalación desde cero)
+-- ---------------------------------------------------------------------
+create table if not exists public.itinerario (
+  id uuid primary key default gen_random_uuid(),
+  orden int not null default 1,
+  emoji text not null default '⭐' check (char_length(emoji) <= 16),
+  titulo text not null check (char_length(titulo) between 1 and 80),
+  duracion int not null default 10 check (duracion between 0 and 600),
+  hora_fija text check (hora_fija is null or hora_fija ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+  responsable text check (responsable is null or char_length(responsable) <= 80),
+  notas text check (notas is null or char_length(notas) <= 300),
+  boton text check (boton is null or boton in ('entrada', 'trivia', 'fiesta') or boton ~ '^video:[a-z0-9-]{2,40}$'),
+  hecho boolean not null default false,
+  creado timestamptz not null default now()
+);
+create table if not exists public.itinerario_config (
+  id int primary key default 1 check (id = 1),
+  duracion_horas numeric(4,2) not null default 7 check (duracion_horas between 1 and 14),
+  fotografa_desde int not null default 25 check (fotografa_desde between -600 and 900),
+  fotografa_horas numeric(4,2) not null default 3 check (fotografa_horas between 0 and 14)
+);
+insert into public.itinerario_config (id) values (1) on conflict do nothing;
+alter table public.itinerario enable row level security;
+alter table public.itinerario_config enable row level security;
+drop policy if exists "admin_todo" on public.itinerario;
+create policy "admin_todo" on public.itinerario for all to authenticated using (public.es_admin()) with check (public.es_admin());
+drop policy if exists "admin_todo" on public.itinerario_config;
+create policy "admin_todo" on public.itinerario_config for all to authenticated using (public.es_admin()) with check (public.es_admin());
+revoke all on public.itinerario, public.itinerario_config from anon;
+grant select, insert, update, delete on public.itinerario, public.itinerario_config to authenticated;
+insert into public.itinerario (orden, emoji, titulo, duracion, hora_fija, notas, boton)
+select orden, emoji, titulo, duracion, hora_fija, notas, boton from (values
+  (1,  '🚪', 'Apertura del salón', 30, null, 'Llegan invitados; muro de fotos', null),
+  (2,  '✨', 'Llega Silvia', 15, null, 'Animación de entrada + su canción, flores de los hijos y vals', 'entrada'),
+  (3,  '🎂', 'Bienvenida y velas', 10, null, 'Palabras breves, brindis, sopla la vela', null),
+  (4,  '🍽️', 'Cena', 45, null, 'Silvia recorre las mesas (foto por mesa)', null),
+  (5,  '🎬', 'Video homenaje', 10, null, null, 'video:homenaje'),
+  (6,  '🏆', 'Trivia', 20, null, 'Con la gente sentada', 'trivia'),
+  (7,  '🍰', 'Postre: torta', 15, null, null, null),
+  (8,  '🪕', 'Folklore', 10, null, '2 canciones', null),
+  (9,  '👨‍👩‍👧‍👦', 'Coreografía familiar', 5, null, 'Cubre el cambio de vestuario', null),
+  (10, '🌹', 'Tango', 10, null, 'Al final sacan a bailar a Silvia y la familia', null),
+  (11, '🚨', '¡Arranca la fiesta!', 5, null, 'ALERTA en pantalla + el DJ dispara el mashup en el BOOM; abre la barra', 'fiesta'),
+  (12, '🕺', 'Primera tanda de baile', 65, null, null, null),
+  (13, '🎊', 'Animación', 60, '01:00', null, null),
+  (14, '🥪', 'Madrugada', 30, null, 'Mesa dulce + sándwiches / pizza', null),
+  (15, '🎶', 'Última tanda', 85, null, null, null),
+  (16, '👋', 'Cierre', 5, null, null, null)
+) as v(orden, emoji, titulo, duracion, hora_fija, notas, boton)
+where not exists (select 1 from public.itinerario);
+
+create table if not exists public.videos (
+  id text primary key check (id ~ '^[a-z0-9-]{2,40}$'),
+  titulo text not null check (char_length(titulo) between 1 and 80),
+  youtube text check (youtube is null or char_length(youtube) <= 200),
+  fijo boolean not null default false,
+  orden int not null default 1,
+  creado timestamptz not null default now()
+);
+insert into public.videos (id, titulo, fijo, orden) values ('homenaje', 'Video homenaje', true, 1) on conflict do nothing;
+alter table public.videos enable row level security;
+drop policy if exists "publico_videos" on public.videos;
+create policy "publico_videos" on public.videos for select to anon, authenticated using (true);
+drop policy if exists "admin_todo" on public.videos;
+create policy "admin_todo" on public.videos for all to authenticated using (public.es_admin()) with check (public.es_admin());
+grant select on public.videos to anon;
+revoke insert, update, delete, truncate, references, trigger on public.videos from anon;
+grant select, insert, update, delete on public.videos to authenticated;
+
+alter table public.pantalla_estado add column if not exists reproduccion jsonb;
+alter table public.pantalla_estado add column if not exists volumen int not null default 100;
+alter table public.pantalla_estado add column if not exists efectos boolean not null default true;
+alter table public.pantalla_estado add column if not exists sonido_ts timestamptz;
+alter table public.pantalla_estado add column if not exists informe jsonb;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'pantalla_volumen_ok' and conrelid = 'public.pantalla_estado'::regclass) then
+    alter table public.pantalla_estado add constraint pantalla_volumen_ok check (volumen between 0 and 100);
+  end if;
+end $$;
+create or replace function public.pantalla_informar(p jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p is null or jsonb_typeof(p) <> 'object' or octet_length(p::text) > 8000 then
+    raise exception 'Informe inválido';
+  end if;
+  update pantalla_estado set informe = jsonb_build_object(
+    'videos', case when jsonb_typeof(p->'videos') = 'array' then p->'videos' else '[]'::jsonb end,
+    'reproduciendo', p->'reproduciendo',
+    'audio', p->>'audio',
+    'ts', now()
+  ) where id = 1;
+end $$;
+revoke all on function public.pantalla_informar(jsonb) from public;
+grant execute on function public.pantalla_informar(jsonb) to anon, authenticated;
+
 -- ¡Listo! Si ves "Success. No rows returned", salió todo bien.
