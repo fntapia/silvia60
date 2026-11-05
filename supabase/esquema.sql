@@ -545,7 +545,7 @@ where not exists (select 1 from public.trivia_preguntas);
 
 -- ---------------------------------------------------------------------
 -- Itinerario (solo admin) y videos / animaciones de la pantalla
--- (lo mismo que supabase/actualizacion-4.sql, para una instalación desde cero)
+-- (lo mismo que supabase/actualizacion-4.sql y -5.sql, para una instalación desde cero)
 -- ---------------------------------------------------------------------
 create table if not exists public.itinerario (
   id uuid primary key default gen_random_uuid(),
@@ -563,7 +563,7 @@ create table if not exists public.itinerario (
 create table if not exists public.itinerario_config (
   id int primary key default 1 check (id = 1),
   duracion_horas numeric(4,2) not null default 7 check (duracion_horas between 1 and 14),
-  fotografa_desde int not null default 25 check (fotografa_desde between -600 and 900),
+  fotografa_desde int not null default 30 check (fotografa_desde between -600 and 900),
   fotografa_horas numeric(4,2) not null default 3 check (fotografa_horas between 0 and 14)
 );
 insert into public.itinerario_config (id) values (1) on conflict do nothing;
@@ -577,22 +577,26 @@ revoke all on public.itinerario, public.itinerario_config from anon;
 grant select, insert, update, delete on public.itinerario, public.itinerario_config to authenticated;
 insert into public.itinerario (orden, emoji, titulo, duracion, hora_fija, notas, boton)
 select orden, emoji, titulo, duracion, hora_fija, notas, boton from (values
-  (1,  '🚪', 'Apertura del salón', 30, null, 'Llegan invitados; muro de fotos', null),
-  (2,  '✨', 'Llega Silvia', 15, null, 'Animación de entrada + su canción, flores de los hijos y vals', 'entrada'),
-  (3,  '🎂', 'Bienvenida y velas', 10, null, 'Palabras breves, brindis, sopla la vela', null),
-  (4,  '🍽️', 'Cena', 45, null, 'Silvia recorre las mesas (foto por mesa)', null),
-  (5,  '🎬', 'Video homenaje', 10, null, null, 'video:homenaje'),
-  (6,  '🏆', 'Trivia', 20, null, 'Con la gente sentada', 'trivia'),
-  (7,  '🍰', 'Postre: torta', 15, null, null, null),
-  (8,  '🪕', 'Folklore', 10, null, '2 canciones', null),
-  (9,  '👨‍👩‍👧‍👦', 'Coreografía familiar', 5, null, 'Cubre el cambio de vestuario', null),
-  (10, '🌹', 'Tango', 10, null, 'Al final sacan a bailar a Silvia y la familia', null),
-  (11, '🚨', '¡Arranca la fiesta!', 5, null, 'ALERTA en pantalla + el DJ dispara el mashup en el BOOM; abre la barra', 'fiesta'),
-  (12, '🕺', 'Primera tanda de baile', 65, null, null, null),
-  (13, '🎊', 'Animación', 60, '01:00', null, null),
-  (14, '🥪', 'Madrugada', 30, null, 'Mesa dulce + sándwiches / pizza', null),
-  (15, '🎶', 'Última tanda', 85, null, null, null),
-  (16, '👋', 'Cierre', 5, null, null, null)
+  (1,  '🚪', 'Apertura de puertas', 30, null, 'Música instrumental', null),
+  (2,  '✨', 'Llega Silvia', 5, null, '▶ Animación «Entrada de Silvia»; el tema de entrada lo pone el DJ', 'entrada'),
+  (3,  '💐', 'Ramo', 5, null, 'Hijos, nietos y Raúl le entregan el ramo', null),
+  (4,  '💃', 'Vals', 15, null, '«Tiempo de vals» (Chayanne) lo pone el DJ · ▶ video «Vals» en pantalla (en bucle) · bailan varios', 'video:vals'),
+  (5,  '📸', 'Fotos mesa a mesa', 20, null, 'Con la fotógrafa', null),
+  (6,  '🥂', 'Brindis, velas y «Feliz cumpleaños»', 15, null, null, null),
+  (7,  '🍽️', 'Cena', 30, null, 'Música electro pop baja', null),
+  (8,  '🎬', 'Video homenaje', 20, null, '▶ Video homenaje; el DJ pone la música en 0', 'video:homenaje'),
+  (9,  '🏆', 'Trivia', 15, null, null, 'trivia'),
+  (10, '🍽️', 'Cierre de la cena', 10, null, 'Sin postre', null),
+  (11, '🌹', 'Tango', 15, null, '2 tangos (Silvia baila: prever su cambio de ropa)', null),
+  (12, '🪕', 'Folklore', 15, null, null, null),
+  (13, '🚨', '¡BOOM! Arranca la fiesta', 5, null, '▶ Animación «¡Arranca la fiesta!»; en el BOOM el DJ larga «Mi chica sexy» (Banda XXI); abre la barra 🍸', 'fiesta'),
+  (14, '🎁', 'Entrega de cotillón', 10, null, 'Después de «Mi chica sexy»; sigue cuarteto', null),
+  (15, '🦸', 'Show Marvel', 60, '01:30', 'Cabezones Daddy Yankee, La Mona y Messi; la música la coordina la animación con el DJ', null),
+  (16, '🔥', 'Post show', 15, null, null, null),
+  (17, '🪅', 'Piñata de Silvidólares', 15, null, '▶ Video «Piñata»; el DJ pone Bzrp Music Sessions #53 (Shakira); papel picado y silbatos', 'video:pinata'),
+  (18, '🎂', 'Torta y mesa dulce', 60, '03:00', 'Sigue el baile', null),
+  (19, '🥪', 'Sándwiches y salado', 55, '04:00', null, null),
+  (20, '👋', 'Cierre y despedida', 5, null, null, null)
 ) as v(orden, emoji, titulo, duracion, hora_fija, notas, boton)
 where not exists (select 1 from public.itinerario);
 
@@ -604,7 +608,21 @@ create table if not exists public.videos (
   orden int not null default 1,
   creado timestamptz not null default now()
 );
-insert into public.videos (id, titulo, fijo, orden) values ('homenaje', 'Video homenaje', true, 1) on conflict do nothing;
+alter table public.videos add column if not exists emoji text not null default '🎬';
+alter table public.videos add column if not exists bucle boolean not null default false;
+alter table public.videos add column if not exists bucle_desde numeric(7,2) not null default 0;
+alter table public.videos add column if not exists mudo boolean not null default false;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'videos_bucle_ok' and conrelid = 'public.videos'::regclass) then
+    alter table public.videos add constraint videos_bucle_ok check (bucle_desde >= 0 and char_length(emoji) <= 16);
+  end if;
+end $$;
+insert into public.videos (id, emoji, titulo, fijo, orden, bucle, bucle_desde, mudo) values
+  ('homenaje', '🎬', 'Video homenaje', true, 1, false, 0, false),
+  ('vals', '💃', 'Vals', true, 2, true, 0, true),
+  ('pinata', '🪅', 'Piñata de Silvidólares', true, 3, true, 12, true)
+on conflict do nothing;
 alter table public.videos enable row level security;
 drop policy if exists "publico_videos" on public.videos;
 create policy "publico_videos" on public.videos for select to anon, authenticated using (true);

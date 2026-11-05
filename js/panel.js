@@ -75,7 +75,7 @@
     const r = p.reproduccion;
     let txt;
     // un video o una animación tapan todo lo demás
-    if (repActiva(r)) txt = r.tipo === 'video' ? `🎬 ${tituloVideo(r.id)} · ${r.estado === 'pausa' ? '⏸ en pausa' : '▶ reproduciendo'}` : `Animación ${ANIMS[r.id] ? ANIMS[r.id].titulo : ''}`;
+    if (repActiva(r)) txt = r.tipo === 'video' ? `${(videos.find(v => v.id === r.id) || {}).emoji || '🎬'} ${tituloVideo(r.id)} · ${r.estado === 'pausa' ? '⏸ en pausa' : '▶ reproduciendo'}` : `Animación ${ANIMS[r.id] ? ANIMS[r.id].titulo : ''}`;
     else if (manual) txt = `Mensaje «${manual.slice(0, 40)}${manual.length > 40 ? '…' : ''}»`;
     else if (enTrivia) txt = { lobby: `Trivia: esperando jugadores${jug != null ? ' · ' + jug + ' adentro' : ''}`, pregunta: `Trivia: pregunta ${e.pregunta_num}/${e.total}`, resultado: `Trivia: respuesta de la ${e.pregunta_num}/${e.total}`, ranking: 'Trivia: ranking', podio: 'Podio 🏆' }[e.fase] || 'Trivia';
     else if (p.muro_pausado) txt = 'Pausada ⏸';
@@ -720,7 +720,7 @@
     } catch (e) { iti.error = e; }
     pintarItinerario();
   }
-  const textoBoton = b => !b ? '' : b === 'entrada' ? '▶ Entrada de Silvia' : b === 'trivia' ? '🎯 Abrir trivia' : b === 'fiesta' ? '🚨 ▶ Alerta' : '▶ ' + tituloVideo(b.slice(6));
+  const textoBoton = b => !b ? '' : b === 'entrada' ? '▶ Entrada de Silvia' : b === 'trivia' ? '🎯 Abrir trivia' : b === 'fiesta' ? '🚨 ▶ ¡BOOM!' : '▶ ' + tituloVideo(b.slice(6));
 
   function pintarItinerario() {
     const falta = iti.error;
@@ -855,7 +855,7 @@
       if (triviaEstado.fase && triviaEstado.fase !== 'apagada') { abrirTab('trivia'); toast('La trivia ya está abierta'); return; }
       await conBoton(btn, async () => { const e2 = await A.controlTrivia('abrir'); if (e2) triviaEstado = Object.assign(triviaEstado, e2); pintarEstadoTrivia(); abrirTab('trivia'); });
     } else if (boton === 'entrada' || boton === 'fiesta') {
-      if (!confirm(boton === 'entrada' ? '¿Lanzar la «Entrada de Silvia» en la pantalla?' : '¿Lanzar la ALERTA «¡Arranca la fiesta!»?\n\nEl BOOM es 8 s después de tocar: avisale al DJ.')) return;
+      if (!confirm(boton === 'entrada' ? '¿Lanzar la «Entrada de Silvia» en la pantalla?' : '¿Lanzar la ALERTA «¡Arranca la fiesta!»?\n\nEl BOOM es 8 s después de tocar: en el BOOM el DJ larga «Mi chica sexy».')) return;
       await conBoton(btn, () => reproducir('anim', boton));
     } else if (boton && boton.startsWith('video:')) {
       const id = boton.slice(6);
@@ -976,11 +976,12 @@
     pintarVideos(); pintarEnVivo();
     if (r && r.tipo === 'anim' && r.id === 'fiesta') cuentaBoom(r);
   }
-  const reproducir = (tipo, id) => mandar({ tipo, id, estado: 'play', inicio: new Date(ahoraSrv()).toISOString(), pos: 0, n: S60.sufijoAleatorio(8) });
+  const reproducir = (tipo, id, extra) => mandar(Object.assign({ tipo, id, estado: 'play', inicio: new Date(ahoraSrv()).toISOString(), pos: 0, n: S60.sufijoAleatorio(8) }, extra));
   async function reproducirVideo(id) {
     const v = videos.find(x => x.id === id), inf = informe(), archivo = inf && (inf.videos || []).find(x => x.id === id && x.ok);
     if (!archivo && !(v && v.youtube) && !confirm(`⚠️ La notebook no avisó que tenga «${tituloVideo(id)}» cargado.\n\n¿Mandarlo igual?`)) return;
-    await reproducir('video', id);
+    // el pedido lleva cómo reproducirlo: la pantalla no depende de internet para saber si va en bucle
+    await reproducir('video', id, v && { bucle: !!v.bucle, desde: +v.bucle_desde || 0, mudo: !!v.mudo });
   }
 
   function estadoArchivo(v) {
@@ -1003,8 +1004,9 @@
     $('#listaVideos').innerHTML = videos.map(v => {
       const suyo = activa && r.tipo === 'video' && r.id === v.id;
       return `<article class="vid-card ${suyo ? 'activo' : ''}" data-id="${esc(v.id)}">
-        <div class="vid-cab"><h4>🎬 ${esc(v.titulo)}</h4>${suyo ? `<span class="pill si vid-estado">${r.estado === 'pausa' ? '⏸ En pausa' : '▶ En pantalla'}</span>` : ''}</div>
+        <div class="vid-cab"><h4>${esc(v.emoji || '🎬')} ${esc(v.titulo)}</h4>${suyo ? `<span class="pill si vid-estado">${r.estado === 'pausa' ? '⏸ En pausa' : '▶ En pantalla'}</span>` : ''}</div>
         <p class="chico vid-archivo">${estadoArchivo(v)}</p>
+        ${v.bucle || v.mudo ? `<p class="chico suave">${v.bucle ? `🔁 Se repite desde ${mmss(+v.bucle_desde || 0)} hasta tocar ⏹` : ''}${v.bucle && v.mudo ? '<br>' : ''}${v.mudo ? '🔇 Mudo: no toca el sonido del salón (la música la pone el DJ)' : ''}</p>` : ''}
         ${suyo ? '<p class="vid-progreso"></p>' : ''}
         <div class="vid-botones">
           ${suyo
@@ -1037,7 +1039,8 @@
     if (!el || !r) return;
     const inf = infoRep(r);
     const pos = inf && inf.estado === 'pausa' ? inf.pos : posActual(r), dur = inf && inf.dur;
-    el.innerHTML = `<b>${mmss(dur ? Math.min(pos, dur) : pos)}</b>${dur ? ' / ' + mmss(dur) : ''}${dur ? `<span class="barra-prog"><i style="width:${Math.min(100, pos / dur * 100)}%"></i></span>` : ''}`
+    el.innerHTML = (r.bucle ? `<b>🔁 En bucle</b> · hace ${mmss(pos)}`
+      : `<b>${mmss(dur ? Math.min(pos, dur) : pos)}</b>${dur ? ' / ' + mmss(dur) : ''}${dur ? `<span class="barra-prog"><i style="width:${Math.min(100, pos / dur * 100)}%"></i></span>` : ''}`)
       + (inf && inf.estado === 'mudo' ? '<br><span class="mal-txt chico">🔇 Sin sonido: tocá una vez la pantalla de la notebook</span>' : '')
       + (inf && inf.estado === 'error' ? '<br><span class="mal-txt chico">⚠️ La notebook no pudo reproducirlo</span>' : '');
   }
@@ -1103,6 +1106,10 @@
     f.id.value = v ? v.id : '';
     f.titulo.value = v ? v.titulo : '';
     f.youtube.value = v ? v.youtube || '' : '';
+    f.bucle.checked = !!(v && v.bucle);
+    f.bucle_desde.value = v ? +v.bucle_desde || 0 : 0;
+    f.mudo.checked = !!(v && v.mudo);
+    $('#campoBucleDesde').classList.toggle('oculto', !f.bucle.checked);
     $('#tituloFormVideo').textContent = v ? 'Editar video' : 'Nuevo video';
     f.classList.remove('oculto');
     $('#btnNuevoVideo').classList.add('oculto');
@@ -1111,6 +1118,7 @@
   function cerrarFormVideo() { $('#formVideo').classList.add('oculto'); $('#btnNuevoVideo').classList.remove('oculto'); }
   $('#btnNuevoVideo').addEventListener('click', () => abrirFormVideo(null));
   $('#btnCancelarVideo').addEventListener('click', cerrarFormVideo);
+  $('#formVideo').bucle.addEventListener('change', e => $('#campoBucleDesde').classList.toggle('oculto', !e.target.checked));
   $('#formVideo').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, viejo = videos.find(v => v.id === f.id.value);
@@ -1119,7 +1127,8 @@
     let id = viejo ? viejo.id : (S60.slugificar(titulo).slice(0, 34) || 'video');
     if (!viejo) { if (id.length < 2) id = 'video'; const base = id; let n = 2; while (videos.some(v => v.id === id)) id = base + '-' + n++; }
     await conBoton(f.querySelector('[type=submit]'), async () => {
-      await A.guardarVideo({ id, titulo, youtube, fijo: viejo ? viejo.fijo : false, orden: viejo ? viejo.orden : videos.reduce((m, v) => Math.max(m, v.orden), 0) + 1 });
+      await A.guardarVideo({ id, titulo, youtube, emoji: viejo ? viejo.emoji : '🎬', fijo: viejo ? viejo.fijo : false, orden: viejo ? viejo.orden : videos.reduce((m, v) => Math.max(m, v.orden), 0) + 1,
+        bucle: f.bucle.checked, bucle_desde: f.bucle.checked ? Math.max(0, +f.bucle_desde.value || 0) : 0, mudo: f.mudo.checked });
       cerrarFormVideo(); await cargarVideos();
       toast(viejo ? 'Video guardado ✔' : 'Video agregado ✔ Ahora cargá el archivo en la notebook (/pantalla/?preparar=1)', '', 6000);
     });

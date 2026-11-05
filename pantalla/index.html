@@ -25,14 +25,8 @@
     <section id="vacio" class="vacio">
       <div class="emblema vacio-emblema" aria-label="60 · Silvia"><span class="emblema-60">60</span><span class="emblema-nombre">Silvia</span></div>
       <p class="vacio-titulo serif">¡Que empiece la fiesta! 🎉</p>
-      <div class="vacio-qr">
-        <div class="qr-grande" id="qrVacio"></div>
-        <div>
-          <p class="esquina-eyebrow">Escaneá con la cámara del celular</p>
-          <p class="vacio-qr-titulo serif"><span class="oro-txt">Subí la primera foto</span> 📸</p>
-          <p class="esquina-link" id="linkVacio"></p>
-        </div>
-      </div>
+      <div class="qr-polaroid"><div class="qr" id="qrVacio"></div><p class="qr-pie">¡Subí tu foto! 📸</p></div>
+      <p class="vacio-ayuda">📸 Escaneá con la cámara del celular</p>
     </section>
     <!-- Collage de polaroids: las arma js/pantalla.js -->
     <section id="collage" class="collage oculto" aria-live="polite">
@@ -65,9 +59,8 @@
       <p class="t-premio serif">¡Hay premio para el ganador! 🎁 <span>Escaneá el QR y sumate</span></p>
       <div class="t-lobby-cuerpo">
         <div class="t-lobby-qr">
-          <div class="qr-grande" id="qrTrivia"></div>
+          <div class="qr-polaroid"><div class="qr" id="qrTrivia"></div><p class="qr-pie">¡Sumate a jugar! 🏆</p></div>
           <p class="t-jugadores">👥 <b id="tCantJug">0</b> <span id="tJugTxt">jugando</span></p>
-          <p class="t-link" id="linkTrivia"></p>
         </div>
         <div class="burbujas" id="burbujas" aria-live="polite">
           <p class="burbujas-vacio serif" id="burbujasVacio">Los apodos aparecen acá a medida que se suman ✨</p>
@@ -111,19 +104,15 @@
   </main>
 
   <!-- QR permanente -->
-  <aside class="esquina-qr" id="esquinaQr">
+  <aside class="esquina-qr qr-polaroid" id="esquinaQr">
     <div class="qr" id="qrFotos"></div>
-    <div>
-      <p class="esquina-eyebrow">Aparece acá al instante</p>
-      <p class="esquina-titulo serif"><span class="oro-txt">¡Subí tu foto!</span> 📸</p>
-      <p class="esquina-link" id="linkFotos"></p>
-    </div>
+    <p class="qr-pie">¡Subí tu foto! 📸</p>
   </aside>
 
   <div class="conexion oculto" id="conexion">Reconectando…</div>
 
   <!-- ============ VIDEO (archivo de esta notebook o YouTube) ============ -->
-  <div class="cine oculto" id="cine"><video id="cineVideo" class="oculto" playsinline preload="auto"></video><div id="cineYt" class="oculto"></div></div>
+  <div class="cine oculto" id="cine"><video id="cineVideo" class="oculto" playsinline preload="auto"></video><video id="cineVideoB" class="oculto" playsinline preload="auto"></video><div id="cineYt" class="oculto"></div></div>
 
   <!-- ============ ✨ ENTRADA DE SILVIA ============ -->
   <section class="show show-entrada oculto" id="showEntrada" aria-hidden="true">
@@ -144,7 +133,6 @@
   <!-- ============ 🚨 ¡ARRANCA LA FIESTA! ============ -->
   <section class="show show-fiesta oculto" id="showFiesta" aria-hidden="true">
     <div class="sf-balizas"><i class="baliza b1"></i><i class="baliza b2"></i></div>
-    <div class="sf-billetes"></div>
     <div class="sf-escena">
       <p class="sf-alerta">🚨 ¡ALERTA! 🚨</p>
       <p class="sf-atencion">¡ATENCIÓN SAN JUAN!<span>SE VIENE LA FIESTA DE SILVIA</span></p>

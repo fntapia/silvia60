@@ -4,7 +4,8 @@
 /* ---------- Video: fundido a negro ---------- */
 .cine { position: fixed; inset: 0; z-index: 9100; background: #000; opacity: 0; transition: opacity .8s ease; display: flex; align-items: center; justify-content: center; }
 .cine.visible { opacity: 1; }
-.cine video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.cine video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.cine video.arriba { z-index: 1; }   /* bucle: dos videos que se relevan sin corte */
 .cine #cineYt { position: absolute; inset: 0; }
 .cine #cineYt iframe { width: 100%; height: 100%; border: 0; }
 .sin-sonido { position: fixed; left: 1.5rem; bottom: 1.5rem; z-index: 9700; padding: .7rem 1.4rem; border-radius: 999px; background: rgba(0, 0, 0, .78); color: #FFF3C4;
@@ -59,12 +60,6 @@
 .baliza.b2 { right: -40vmax; animation-direction: reverse; background: conic-gradient(rgba(255, 190, 40, .85) 0 22deg, transparent 22deg 180deg, rgba(255, 190, 40, .85) 180deg 202deg, transparent 202deg); }
 @keyframes girar { to { transform: rotate(360deg); } }
 @keyframes titilaRojo { 50% { opacity: .15; } }
-.sf-billetes { position: absolute; inset: 0; z-index: 2; overflow: hidden; perspective: 1200px; pointer-events: none; }
-.billete { position: absolute; top: 0; aspect-ratio: 1137 / 513; will-change: transform; }
-.b-giro { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
-.b-cara { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: .5rem; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  box-shadow: 0 .8rem 1.6rem rgba(0, 0, 0, .45), 0 0 0 .12rem rgba(245, 217, 122, .7), 0 0 1.4rem rgba(245, 217, 122, .35); }
-.b-dorso { transform: rotateY(180deg); }
 .sf-escena { position: absolute; inset: 0; z-index: 3; }
 .sf-escena.temblor { animation: temblor .11s linear infinite; }
 .sf-escena.temblor.fuerte { animation: temblorFuerte .08s linear infinite; }

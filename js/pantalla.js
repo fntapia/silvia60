@@ -37,18 +37,11 @@
   /* ---------- QR ---------- */
   const linkFotos = S60.url('fotos/');
   const linkTrivia = S60.url('trivia/');
-  const textoLink = u => C.linkCortoTexto || u.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  function esquinaFotos() {
-    $('#qrFotos').innerHTML = S60.qrSvg(linkFotos);
-    $('#esquinaQr .esquina-titulo').innerHTML = '<span class="oro-txt">¡Subí tu foto!</span> 📸';
-    $('#esquinaQr .esquina-eyebrow').textContent = 'Aparece acá al instante';
-    $('#linkFotos').textContent = textoLink(linkFotos);
-  }
-  esquinaFotos();
-  $('#qrVacio').innerHTML = S60.qrSvg(linkFotos);
-  $('#linkVacio').textContent = textoLink(linkFotos);
-  $('#qrTrivia').innerHTML = S60.qrSvg(linkTrivia);
-  $('#linkTrivia').textContent = linkTrivia.replace(/^https?:\/\//, '');
+  // Polaroids con el QR y sin ningún link escrito
+  const COLOR_QR = '#3b2a08';
+  $('#qrFotos').innerHTML = S60.qrSvg(linkFotos, COLOR_QR);
+  $('#qrVacio').innerHTML = S60.qrSvg(linkFotos, COLOR_QR);
+  $('#qrTrivia').innerHTML = S60.qrSvg(linkTrivia, COLOR_QR);
 
   /* ---------- Precarga de imágenes ---------- */
   // Con tiempos máximos: si el navegador se cuelga decodificando (pasa con la pestaña en segundo plano), el muro sigue igual
@@ -94,12 +87,16 @@
   }
 
   /* ====================== MURO DE POLAROIDS ====================== */
-  // Lugares del collage: grilla de 6 × 3 con desorden; abajo a la derecha queda libre para el QR.
+  // Lugares del collage: grilla de 6 × 3 con desorden. Abajo a la derecha queda libre para la polaroid del QR
+  // (es alta, así que tampoco hay foto justo arriba de ella) y las vecinas se inclinan al revés que ella.
   const COLS = 6, FILAS = 3;
   const slots = [];
   for (let r = 0; r < FILAS; r++) for (let c = 0; c < COLS; c++) {
     if (r === FILAS - 1 && c >= COLS - 2) continue;
-    slots.push({ x: (c + .5) / COLS * 100, y: [22, 50, 77][r], el: null, foto: null, t: 0, cargando: null });
+    if (r === 1 && c === COLS - 1) continue;
+    // la vecina de la fila del medio va un poco a la izquierda: aun con el desorden no llega a la polaroid del QR
+    slots.push({ x: (c + .5) / COLS * 100 - (r === 1 && c === COLS - 2 ? 5 : 0), y: r === 0 && c === COLS - 1 ? 27 : [22, 50, 77][r], el: null, foto: null, t: 0, cargando: null,
+      vecinaQr: c >= COLS - 2 || (r === FILAS - 1 && c === COLS - 3) });
   }
   // con pocas fotos, se llenan primero los lugares del centro
   slots.sort((a, b) => Math.hypot((a.x - 46) * 2, a.y - 50) - Math.hypot((b.x - 46) * 2, b.y - 50));
@@ -120,7 +117,7 @@
   }
   // Lo ubica en su lugar con un poco de desorden y una inclinación al azar
   function ubicar(el, s) {
-    const g = azar(-8, 8);
+    const g = s.vecinaQr ? azar(-8, -2) : azar(-8, 8);
     el.dataset.giro = g;
     el.style.left = (s.x + azar(-2.6, 2.6)) + '%';
     el.style.top = (s.y + azar(-2.5, 2.5)) + '%';

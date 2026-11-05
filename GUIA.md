@@ -106,7 +106,7 @@ Panel → **Evento**: fecha, hora, el texto de puntualidad y hasta cuándo se pu
 ### ✔ Itinerario de la fiesta (panel → 🕒 Itinerario)
 (Requiere haber corrido `supabase/actualizacion-4.sql` una vez.)
 - Cada momento tiene **duración**: la hora de inicio se calcula sola en cadena desde la hora del evento. Si cambiás la hora en ☰ → **Evento**, una duración (botones **−5 / +5**), el orden (**▲ ▼**) o agregás/borrás algo, todo se recalcula al instante.
-- **Hora fija** (✏️ → «📌 Hora fija»): ese momento no se mueve (ej. la Animación a la 01:00). Si lo anterior llega antes, avisa «⏳ Sobran 20 min»; si se pasa, «⚠️ Faltan 10 min: acortá algo antes».
+- **Hora fija** (✏️ → «📌 Hora fija»): ese momento no se mueve (ej. el Show Marvel a la 01:30). Si lo anterior llega antes, avisa «⏳ Sobran 20 min»; si se pasa, «⚠️ Faltan 10 min: acortá algo antes».
 - Arriba: inicio, fin y total, y si coincide con las horas **contratadas** (7 h, editable).
 - **📷 Fotógrafa**: poné desde qué hora y cuántas horas; marca qué momentos cubre.
 - El día de la fiesta muestra **AHORA** y **PRÓXIMO en 12 min**. Tildá **✔** lo que ya pasó.
@@ -120,7 +120,8 @@ Supabase gratis no acepta archivos grandes y pasar videos por internet en el sal
 3. En el panel → **Videos** tiene que decir «✅ Cargado en la pantalla (tamaño · duración)».
 - **+ Agregar video**: título (y, si querés, un link de YouTube **no listado** como alternativa; necesita buena conexión). Después cargá el archivo en la notebook igual que arriba.
 - Desde el celular: **▶ Reproducir**, **⏸ Pausa / ▶ Seguir**, **⏹ Volver al muro** y el **volumen**. Al terminar el video, la pantalla vuelve sola al muro. Si la pantalla se recarga, sigue donde iba.
-- **Animaciones** (no necesitan archivos): **✨ Entrada de Silvia** (queda en el cuadro final hasta ⏹) y **🚨 ¡Arranca la fiesta!** (vuelve sola al muro). **El DJ dispara el mashup en el BOOM, que es 8 s después de tocar ▶** (el panel muestra la cuenta «BOOM en 3…»). La pantalla no pasa música.
+- **Animaciones** (no necesitan archivos): **✨ Entrada de Silvia** (queda en el cuadro final hasta ⏹) y **🚨 ¡Arranca la fiesta!** (vuelve sola al muro). **En el BOOM, que es 8 s después de tocar ▶, el DJ larga «Mi chica sexy»** (el panel muestra la cuenta «BOOM en 3…»). La pantalla no pasa música.
+- **💃 Vals** y **🪅 Piñata de Silvidólares**: cargá en la notebook, con **📂 Elegir archivo**, `05 Video/pantalla/Vals-Silvia60-bucle.mp4` y `Pinata-Silvidolares-bucle.mp4`. Son mudos (no tocan el sonido del salón) y se repiten sin corte hasta tocar ⏹: el Vals desde el principio y la Piñata desde el segundo 12. Cualquier video puede ir en bucle: ✏️ Editar → «Repetir en bucle» y «Repetir desde el segundo».
 - **🔊 Efectos de sonido** (sirena, BOOM, destellos) se pueden apagar; **Probar sonido** hace sonar la notebook.
 - ⚠️ **Sonido**: los navegadores no dejan sonar nada hasta que alguien toca la pantalla. Por eso, al abrir `/pantalla/` tocá «Tocá para empezar». Si la página se recargó sola y aparece «🔇 Tocá la pantalla para activar el sonido», dale un clic en la notebook.
 
@@ -129,9 +130,6 @@ Panel → **Trivia** → hay 5 de ejemplo. Editalas con las respuestas reales y 
 
 ### ☐ (Opcional) Música de fondo
 Subí un archivo `musica.mp3` a `assets` y en `config.js` poné `musicaUrl: 'assets/musica.mp3'`. Aparece un botón ♪ (apagado hasta que el invitado lo toca). Usá música libre de derechos.
-
-### ☐ (Opcional) Link corto para la pantalla
-Si creás un link corto (por ejemplo en bit.ly apuntando a `.../silvia60/fotos/`), ponelo en `linkCortoTexto` en `config.js` para que se lea mejor debajo del QR.
 
 ---
 

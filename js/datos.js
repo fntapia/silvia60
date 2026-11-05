@@ -29,30 +29,42 @@
       responsable: txt(it.responsable, 80), notas: txt(it.notas, 300), boton: it.boton || null, hecho: !!it.hecho
     };
   }
-  const CONFIG_ITINERARIO = { id: 1, duracion_horas: 7, fotografa_desde: 25, fotografa_horas: 3 };
-  // Mismo itinerario inicial que supabase/actualizacion-4.sql (para el modo demo)
+  const CONFIG_ITINERARIO = { id: 1, duracion_horas: 7, fotografa_desde: 30, fotografa_horas: 3 };
+  // Mismo itinerario que supabase/actualizacion-5.sql (para el modo demo)
   const ITINERARIO_INICIAL = [
-    ['🚪', 'Apertura del salón', 30, null, 'Llegan invitados; muro de fotos', null],
-    ['✨', 'Llega Silvia', 15, null, 'Animación de entrada + su canción, flores de los hijos y vals', 'entrada'],
-    ['🎂', 'Bienvenida y velas', 10, null, 'Palabras breves, brindis, sopla la vela', null],
-    ['🍽️', 'Cena', 45, null, 'Silvia recorre las mesas (foto por mesa)', null],
-    ['🎬', 'Video homenaje', 10, null, null, 'video:homenaje'],
-    ['🏆', 'Trivia', 20, null, 'Con la gente sentada', 'trivia'],
-    ['🍰', 'Postre: torta', 15, null, null, null],
-    ['🪕', 'Folklore', 10, null, '2 canciones', null],
-    ['👨‍👩‍👧‍👦', 'Coreografía familiar', 5, null, 'Cubre el cambio de vestuario', null],
-    ['🌹', 'Tango', 10, null, 'Al final sacan a bailar a Silvia y la familia', null],
-    ['🚨', '¡Arranca la fiesta!', 5, null, 'ALERTA en pantalla + el DJ dispara el mashup en el BOOM; abre la barra', 'fiesta'],
-    ['🕺', 'Primera tanda de baile', 65, null, null, null],
-    ['🎊', 'Animación', 60, '01:00', null, null],
-    ['🥪', 'Madrugada', 30, null, 'Mesa dulce + sándwiches / pizza', null],
-    ['🎶', 'Última tanda', 85, null, null, null],
-    ['👋', 'Cierre', 5, null, null, null]
+    ['🚪', 'Apertura de puertas', 30, null, 'Música instrumental', null],
+    ['✨', 'Llega Silvia', 5, null, '▶ Animación «Entrada de Silvia»; el tema de entrada lo pone el DJ', 'entrada'],
+    ['💐', 'Ramo', 5, null, 'Hijos, nietos y Raúl le entregan el ramo', null],
+    ['💃', 'Vals', 15, null, '«Tiempo de vals» (Chayanne) lo pone el DJ · ▶ video «Vals» en pantalla (en bucle) · bailan varios', 'video:vals'],
+    ['📸', 'Fotos mesa a mesa', 20, null, 'Con la fotógrafa', null],
+    ['🥂', 'Brindis, velas y «Feliz cumpleaños»', 15, null, null, null],
+    ['🍽️', 'Cena', 30, null, 'Música electro pop baja', null],
+    ['🎬', 'Video homenaje', 20, null, '▶ Video homenaje; el DJ pone la música en 0', 'video:homenaje'],
+    ['🏆', 'Trivia', 15, null, null, 'trivia'],
+    ['🍽️', 'Cierre de la cena', 10, null, 'Sin postre', null],
+    ['🌹', 'Tango', 15, null, '2 tangos (Silvia baila: prever su cambio de ropa)', null],
+    ['🪕', 'Folklore', 15, null, null, null],
+    ['🚨', '¡BOOM! Arranca la fiesta', 5, null, '▶ Animación «¡Arranca la fiesta!»; en el BOOM el DJ larga «Mi chica sexy» (Banda XXI); abre la barra 🍸', 'fiesta'],
+    ['🎁', 'Entrega de cotillón', 10, null, 'Después de «Mi chica sexy»; sigue cuarteto', null],
+    ['🦸', 'Show Marvel', 60, '01:30', 'Cabezones Daddy Yankee, La Mona y Messi; la música la coordina la animación con el DJ', null],
+    ['🔥', 'Post show', 15, null, null, null],
+    ['🪅', 'Piñata de Silvidólares', 15, null, '▶ Video «Piñata»; el DJ pone Bzrp Music Sessions #53 (Shakira); papel picado y silbatos', 'video:pinata'],
+    ['🎂', 'Torta y mesa dulce', 60, '03:00', 'Sigue el baile', null],
+    ['🥪', 'Sándwiches y salado', 55, '04:00', null, null],
+    ['👋', 'Cierre y despedida', 5, null, null, null]
   ];
+  const VIDEOS_FIJOS = [
+    { id: 'homenaje', emoji: '🎬', titulo: 'Video homenaje', youtube: null, fijo: true, orden: 1, bucle: false, bucle_desde: 0, mudo: false },
+    { id: 'vals', emoji: '💃', titulo: 'Vals', youtube: null, fijo: true, orden: 2, bucle: true, bucle_desde: 0, mudo: true },
+    { id: 'pinata', emoji: '🪅', titulo: 'Piñata de Silvidólares', youtube: null, fijo: true, orden: 3, bucle: true, bucle_desde: 12, mudo: true }
+  ];
+  function filaVideo(v) {
+    return { id: v.id, emoji: v.emoji || '🎬', titulo: v.titulo, youtube: v.youtube || null, fijo: !!v.fijo, orden: v.orden || 1, bucle: !!v.bucle, bucle_desde: Math.max(0, +v.bucle_desde || 0), mudo: !!v.mudo };
+  }
   // Si falta correr el SQL nuevo, un aviso claro en vez de un error técnico
   function errorSql4(e) {
     const m = (e && e.message) || String(e);
-    const err = new Error(/does not exist|schema cache|could not find/i.test(m) ? 'Falta correr supabase/actualizacion-4.sql en Supabase' : m);
+    const err = new Error(/does not exist|schema cache|could not find/i.test(m) ? 'Falta correr supabase/actualizacion-4.sql y actualizacion-5.sql en Supabase' : m);
     err.faltaSql = /actualizacion-4/.test(err.message);
     return err;
   }
@@ -277,7 +289,7 @@
         /* ---- Videos de la pantalla ---- */
         async guardarVideo(v) {
           const s = await db();
-          const { error } = await s.from('videos').upsert({ id: v.id, titulo: v.titulo, youtube: v.youtube || null, fijo: !!v.fijo, orden: v.orden || 1 });
+          const { error } = await s.from('videos').upsert(filaVideo(v));
           if (error) throw errorSql4(error);
         },
         async borrarVideo(id) {
@@ -386,7 +398,8 @@
           Object.assign({ id: crypto.randomUUID(), creado: ahora }, filaItem({ orden: i + 1, emoji, titulo, duracion, hora_fija, notas, boton })));
       }
       if (!d.itinerario_config) d.itinerario_config = Object.assign({}, CONFIG_ITINERARIO);
-      if (!d.videos) d.videos = [{ id: 'homenaje', titulo: 'Video homenaje', youtube: null, fijo: true, orden: 1, creado: new Date().toISOString() }];
+      if (!d.videos) d.videos = [];
+      VIDEOS_FIJOS.forEach(v => { if (!d.videos.some(x => x.id === v.id)) d.videos.push(Object.assign({ creado: new Date().toISOString() }, v)); });
       d.pantalla = Object.assign({ reproduccion: null, volumen: 100, efectos: true, sonido_ts: null, informe: null }, d.pantalla);
       return d;
     }
@@ -699,7 +712,7 @@
         async guardarVideo(v) {
           exigirAdmin();
           cambiar(d => {
-            const fila = { id: v.id, titulo: v.titulo, youtube: v.youtube || null, fijo: !!v.fijo, orden: v.orden || 1 };
+            const fila = filaVideo(v);
             const e = d.videos.find(x => x.id === v.id);
             if (e) Object.assign(e, fila); else d.videos.push(Object.assign({ creado: new Date().toISOString() }, fila));
           });

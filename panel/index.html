@@ -208,6 +208,9 @@
           <label class="campo"><span>Título</span><input type="text" name="titulo" maxlength="80" required placeholder="Fotos de la familia"></label>
           <label class="campo"><span>Link de YouTube no listado <small>(opcional, por si prefieren)</small></span><input type="url" name="youtube" maxlength="200" placeholder="https://youtu.be/…" autocapitalize="off"></label>
           <p class="chico suave">⚠️ YouTube necesita buena conexión en el salón. Si el archivo está cargado en la notebook, se usa el archivo.</p>
+          <label class="check"><input type="checkbox" name="bucle"> <span>🔁 Repetir en bucle (hasta tocar ⏹)</span></label>
+          <label class="campo oculto" id="campoBucleDesde"><span>Repetir desde el segundo</span><input type="number" name="bucle_desde" min="0" max="36000" step="1" inputmode="numeric" value="0"></label>
+          <label class="check"><input type="checkbox" name="mudo"> <span>🔇 Video mudo (no toca el sonido del salón)</span></label>
           <div class="fila-botones dos">
             <button class="btn btn-oro" type="submit">Guardar</button>
             <button class="btn" type="button" id="btnCancelarVideo">Cancelar</button>
@@ -227,7 +230,7 @@
           </article>
           <article class="vid-card anim-card" data-anim="fiesta">
             <div class="vid-cab"><h4>🚨 ¡Arranca la fiesta!</h4><span class="pill sin vid-estado">Lista</span></div>
-            <p class="chico"><b>🎧 El DJ dispara el mashup en el BOOM, 8 s después de tocar ▶.</b> <span class="suave">La pantalla no pasa música: sirena, cuenta 3‑2‑1, BOOM y lluvia de Silvidólares (~20 s). Después vuelve sola al muro.</span></p>
+            <p class="chico"><b>🎧 En el BOOM el DJ larga «Mi chica sexy» (8 s después de tocar ▶).</b> <span class="suave">La pantalla no pasa música: sirena, cuenta 3‑2‑1, BOOM, confeti y fuegos (~20 s). Después vuelve sola al muro.</span></p>
             <div class="vid-botones">
               <button class="btn btn-oro" data-a="anim-play" type="button">▶ Alerta</button>
               <button class="btn" data-a="parar" type="button">⏹ Volver al muro</button>

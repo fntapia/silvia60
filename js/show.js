@@ -4,7 +4,6 @@
 (function () {
   const { $, esc } = S60;
   const BOOM = 8, DURA_FIESTA = 20;
-  const DIR = '../assets/';
   const azar = (a, b) => a + Math.random() * (b - a);
 
   let desfase = () => 0, alCambiar = () => {};
@@ -183,11 +182,11 @@
 
   /* ====================== REPRODUCTORES (archivo local o YouTube) ====================== */
   const cine = () => $('#cine');
-  function reproductorLocal(reg, alTerminar) {
+  function reproductorLocal(reg, alTerminar, r) {
     const v = $('#cineVideo');
     const url = URL.createObjectURL(reg.archivo);
     v.classList.remove('oculto');
-    v.src = url; v.muted = false; v.volume = vol();
+    v.src = url; v.muted = !!r.mudo; v.volume = vol();
     v.onended = alTerminar;
     return {
       play: () => v.play(),
@@ -197,10 +196,67 @@
       dur: () => v.duration || reg.dur || 0,
       volumen: x => { v.volume = x; },
       mutear: () => { v.muted = true; },
-      desmutear: () => { v.muted = false; },
+      desmutear: () => { v.muted = !!r.mudo; },
       pausado: () => v.paused,
       destruir: () => { v.pause(); v.onended = null; v.removeAttribute('src'); v.load(); URL.revokeObjectURL(url); v.classList.add('oculto'); }
     };
+  }
+  // Bucle sin cortes: dos videos del mismo archivo. El segundo espera listo en el punto de repetición
+  // y, justo antes de que termine el primero, arranca abajo y pasa adelante recién con su primer cuadro en pantalla.
+  function reproductorBucle(reg, r) {
+    const url = URL.createObjectURL(reg.archivo);
+    const desde = () => Math.min(+r.desde || 0, Math.max(0, (reg.dur || 0) - 1));
+    let act = $('#cineVideo'), sig = $('#cineVideoB'), parado = false, cambiando = false, raf = null, mudo = !!r.mudo;
+    [act, sig].forEach(v => { v.classList.remove('oculto'); v.src = url; v.muted = mudo; v.volume = vol(); v.preload = 'auto'; v.onended = e => { if (e.target === act) cambiar(); }; });
+    act.classList.add('arriba'); sig.classList.remove('arriba');
+    sig.currentTime = desde();
+    function adelante(nuevo, viejo) {
+      nuevo.classList.add('arriba'); viejo.classList.remove('arriba');
+      viejo.pause();
+      try { viejo.currentTime = desde(); } catch (e) {}
+      cambiando = false;
+    }
+    function cambiar() {
+      if (cambiando || parado) return;
+      cambiando = true;
+      const viejo = act, nuevo = sig;
+      act = nuevo; sig = viejo;
+      nuevo.muted = mudo; nuevo.volume = viejo.volume;
+      const listo = () => { if (!parado) adelante(nuevo, viejo); };
+      if (nuevo.requestVideoFrameCallback) nuevo.requestVideoFrameCallback(listo);
+      else nuevo.addEventListener('playing', listo, { once: true });
+      // si la pestaña está en segundo plano no llegan cuadros: que el relevo no quede esperando
+      setTimeout(() => { if (cambiando && act === nuevo) listo(); }, 500);
+      nuevo.play().catch(() => {});
+    }
+    (function vigilar() {
+      if (parado) return;
+      if (!act.paused && act.duration && act.duration - act.currentTime < .1) cambiar();
+      raf = requestAnimationFrame(vigilar);
+    })();
+    return {
+      bucle: true,
+      play: () => act.play(),
+      pausa: () => act.pause(),
+      ir: s => { try { act.currentTime = s; } catch (e) {} },
+      pos: () => act.currentTime || 0,
+      dur: () => act.duration || reg.dur || 0,
+      volumen: x => { act.volume = x; sig.volume = x; },
+      mutear: () => { mudo = true; act.muted = sig.muted = true; },
+      desmutear: () => { mudo = !!r.mudo; act.muted = sig.muted = mudo; },
+      pausado: () => act.paused,
+      destruir: () => {
+        parado = true; cancelAnimationFrame(raf);
+        [act, sig].forEach(v => { v.pause(); v.onended = null; v.removeAttribute('src'); v.load(); v.classList.add('oculto'); v.classList.remove('arriba'); });
+        URL.revokeObjectURL(url);
+      }
+    };
+  }
+  // Posición dentro del bucle: pasado el final, vuelve a contar desde el punto de repetición
+  function posEnBucle(pos, dur, desde) {
+    if (!dur || pos < dur) return pos;
+    const d = Math.min(desde || 0, Math.max(0, dur - 1));
+    return d + (pos - d) % (dur - d);
   }
   let ytApi = null;
   function cargarYt() {
@@ -253,7 +309,7 @@
       ytId = v && idYoutube(v.youtube);
       if (!ytId) { fallidos.add(r.n); informarRep(r, 'sin-archivo'); console.warn('Pantalla: no tengo el video', r.id); return; }
     }
-    if (reg && reg.dur && posDe(r) >= reg.dur - .5) { finalizar(r.n); informarRep(r, 'fin'); return; }
+    if (!r.bucle && reg && reg.dur && posDe(r) >= reg.dur - .5) { finalizar(r.n); informarRep(r, 'fin'); return; }
     if (actual) cerrar(true);
     actual = yo;
     yo.cerrar = () => { yo.timers.forEach(clearInterval); if (yo.reproductor) yo.reproductor.destruir(); };
@@ -261,12 +317,19 @@
     const c = cine();
     c.classList.remove('oculto');
     requestAnimationFrame(() => c.classList.add('visible'));         // fundido a negro
-    const terminar = () => { if (actual !== yo) return; finalizar(r.n); informarRep(yo.rep, 'fin'); cerrar(); };
+    const terminar = () => {
+      if (actual !== yo) return;
+      if (r.bucle) { yo.reproductor.ir(+r.desde || 0); yo.reproductor.play(); return; }   // YouTube: vuelve al punto de repetición
+      finalizar(r.n); informarRep(yo.rep, 'fin'); cerrar();
+    };
     try {
-      yo.reproductor = reg && reg.ok ? reproductorLocal(reg, terminar) : await reproductorYoutube(ytId, posDe(r), terminar, () => { if (actual === yo) { fallidos.add(r.n); informarRep(r, 'error'); cerrar(); } });
+      yo.reproductor = reg && reg.ok ? (r.bucle ? reproductorBucle(reg, r) : reproductorLocal(reg, terminar, r))
+        : await reproductorYoutube(ytId, posDe(r), terminar, () => { if (actual === yo) { fallidos.add(r.n); informarRep(r, 'error'); cerrar(); } });
     } catch (e) { if (actual === yo) { fallidos.add(r.n); informarRep(r, 'error'); cerrar(); } return; }
     if (actual !== yo) { yo.reproductor.destruir(); return; }
+    yo.durBucle = reg && reg.dur;
     yo.reproductor.volumen(vol());
+    if (r.mudo) yo.reproductor.mutear();
     await new Promise(ok => setTimeout(ok, 800));
     if (actual !== yo) return;
     await sincronizarVideo(yo.rep, true);
@@ -276,21 +339,22 @@
     const yo = actual; if (!yo || !yo.reproductor) return;
     const rp = yo.reproductor, antes = yo.rep;
     yo.rep = r;
-    const objetivo = posDe(r);
+    // En bucle la posición solo se ajusta al arrancar (o al recargar): corregirla después sería un salto visible
+    const objetivo = r.bucle ? posEnBucle(posDe(r), yo.durBucle || rp.dur(), +r.desde || 0) : posDe(r);
     if (r.estado === 'pausa') {
       rp.pausa();
-      if (Math.abs(rp.pos() - objetivo) > 1) rp.ir(objetivo);
+      if ((primera || !r.bucle) && Math.abs(rp.pos() - objetivo) > 1) rp.ir(objetivo);
       if (primera || antes.estado !== 'pausa') informarRep(r, 'pausa');
       return;
     }
-    if (primera || Math.abs(rp.pos() - objetivo) > 2) rp.ir(objetivo);
+    if (primera || (!r.bucle && Math.abs(rp.pos() - objetivo) > 2)) rp.ir(objetivo);
     if (primera || antes.estado !== 'play' || rp.pausado()) {
       try { await rp.play(); yo.mudo = false; }
       catch (e) {
-        // sin un toque previo el navegador no deja sonido: arranca mudo y avisa
-        rp.mutear(); yo.mudo = true;
+        // sin un toque previo el navegador no deja sonido: arranca mudo y avisa (los videos mudos no lo necesitan)
+        rp.mutear();
+        if (!r.mudo) { yo.mudo = true; avisoSinSonido(true); }
         try { await rp.play(); } catch (x) {}
-        avisoSinSonido(true);
       }
       informarRep(r, yo.mudo ? 'mudo' : 'play');
     }
@@ -368,50 +432,15 @@
   }
 
   // 🚨 ¡ARRANCA LA FIESTA! (~20 s; el BOOM es exactamente 8 s después de tocar ▶; después vuelve solo al muro)
-  let billetesListos = null;
-  function precargarBilletes() {
-    if (!billetesListos) billetesListos = Promise.all(['silvidolar-frente.webp', 'silvidolar-dorso.webp'].map(f => new Promise(ok => { const i = new Image(); i.onload = i.onerror = ok; i.src = DIR + f; })));
-    return billetesListos;
-  }
   function animFiesta(r, alFin) {
     const raiz = $('#showFiesta');
     raiz.querySelectorAll('.ver, .fuera, .temblor, .fuerte, .arriba').forEach(el => el.classList.remove('ver', 'fuera', 'temblor', 'fuerte', 'arriba'));
     raiz.classList.remove('oculto', 'apagando', 'post-boom');
-    precargarBilletes();
     const q = s => raiz.querySelector(s);
     const alerta = q('.sf-alerta'), aten = q('.sf-atencion'), cuenta = q('.sf-cuenta'), boom = q('.sf-boom'), flash = q('.sf-flash'),
-      balizas = q('.sf-balizas'), final = q('.sf-final'), escena = q('.sf-escena'), lluvia = q('.sf-billetes');
-    lluvia.innerHTML = '';
-    let pararSirena = () => {}, lluviaT = null;
+      balizas = q('.sf-balizas'), final = q('.sf-final'), escena = q('.sf-escena');
+    let pararSirena = () => {};
     const numero = (txt, s, fr) => { cuenta.textContent = txt; cuenta.classList.remove('ver'); void cuenta.offsetWidth; ver(cuenta); if (!s) Sonido.pitido(fr); };
-    function billete() {
-      const b = document.createElement('div');
-      b.className = 'billete';
-      const ancho = azar(10, 17);
-      b.style.width = ancho + 'rem';
-      b.style.left = azar(-6, 96) + '%';
-      b.innerHTML = `<div class="b-giro"><img class="b-cara" src="${DIR}silvidolar-frente.webp" alt=""><img class="b-cara b-dorso" src="${DIR}silvidolar-dorso.webp" alt=""></div>`;
-      lluvia.appendChild(b);
-      const dur = azar(4800, 8200), x = () => azar(-9, 9), g0 = azar(-40, 40);
-      const caer = b.animate([
-        { transform: `translate(0, -32vh) rotate(${g0}deg)` },
-        { transform: `translate(${x()}vw, 22vh) rotate(${g0 + azar(-50, 50)}deg)` },
-        { transform: `translate(${x()}vw, 66vh) rotate(${g0 + azar(-90, 90)}deg)` },
-        { transform: `translate(${x()}vw, 128vh) rotate(${g0 + azar(-140, 140)}deg)` }
-      ], { duration: dur, easing: 'cubic-bezier(.35, .1, .6, 1)', fill: 'forwards' });
-      const lado = Math.random() < .5 ? 1 : -1;
-      b.firstChild.animate([
-        { transform: 'rotateY(0deg) rotateX(18deg)' },
-        { transform: `rotateY(${180 * lado}deg) rotateX(-18deg)` },
-        { transform: `rotateY(${360 * lado}deg) rotateX(18deg)` }
-      ], { duration: azar(1300, 2600), iterations: Infinity });
-      caer.onfinish = () => b.remove();
-    }
-    function empezarLluvia() {
-      clearInterval(lluviaT);
-      for (let i = 0; i < 24; i++) setTimeout(billete, i * 50);
-      lluviaT = setInterval(() => { if (lluvia.childElementCount < 80) billete(); }, 100);
-    }
     const desde = transcurrido(r);
     const cortar = linea(raiz, [
       [0, s => { ver(raiz); ver(balizas); ver(alerta); if (!s) pararSirena = Sonido.sirena(4.8); }],
@@ -432,12 +461,12 @@
           }
         }
       }],
-      [9.3, s => { fuera(boom); ver(final); empezarLluvia(); if (!s) S60.fiesta(7500, 2.4); }],
-      [17, () => { clearInterval(lluviaT); }],
+      // confeti multicolor y fuegos hasta el final (si la pantalla se recargó a mitad, sigue por lo que falta)
+      [9.3, s => { fuera(boom); ver(final); const resta = 17500 - desde; if (!s) S60.fiesta(8000, 2.4); else if (resta > 1000) S60.fiesta(resta, 2.4); }],
       [18.6, () => raiz.classList.add('apagando')],
       [DURA_FIESTA, () => { finalizar(r.n); alFin(); }]
     ], desde);
-    return () => { cortar(); pararSirena(); clearInterval(lluviaT); setTimeout(() => { lluvia.innerHTML = ''; }, 900); };
+    return () => { cortar(); pararSirena(); };
   }
 
   function iniciarAnim(r) {
@@ -500,9 +529,9 @@
     const filas = lista.map(v => ({ v, g: guardados.find(x => x.id === v.id) }))
       .concat(guardados.filter(g => !lista.some(v => v.id === g.id)).map(g => ({ v: { id: g.id, titulo: g.titulo || g.id, huerfano: true }, g })));
     $('#prepLista').innerHTML = filas.map(({ v, g }) => `
-      <div class="prep-fila" data-id="${esc(v.id)}">
+      <div class="prep-fila" data-id="${esc(v.id)}" data-titulo="${esc(v.titulo)}">
         <div class="prep-info">
-          <b>🎬 ${esc(v.titulo)}${v.huerfano ? ' <small>(ya no está en el panel)</small>' : ''}</b>
+          <b>${esc(v.emoji || '🎬')} ${esc(v.titulo)}${v.huerfano ? ' <small>(ya no está en el panel)</small>' : ''}${v.bucle ? ` <small>· 🔁 en bucle desde el segundo ${+v.bucle_desde || 0}</small>` : ''}</b>
           <span class="${g ? (g.ok ? 'ok' : 'mal') : 'falta'}">${g ? (g.ok ? `✅ ${esc(g.nombre)} · ${mb(g.bytes)} · ${mmss(g.dur)}` : `⚠️ ${esc(g.nombre)}: ${esc(g.motivo || 'no se puede reproducir')}. Usá MP4 (H.264).`) : (v.youtube ? '▶ Sin archivo: se usaría YouTube (necesita buena conexión)' : '⚠️ Falta elegir el archivo')}</span>
         </div>
         <div class="prep-botones">
@@ -545,7 +574,7 @@
     $('#prepLista').addEventListener('change', async e => {
       const inp = e.target.closest('input[type=file]'); if (!inp || !inp.files[0]) return;
       const id = inp.closest('.prep-fila').dataset.id;
-      const titulo = inp.closest('.prep-fila').querySelector('b').textContent.replace(/^🎬\s*/, '');
+      const titulo = inp.closest('.prep-fila').dataset.titulo;
       const info = await cargarArchivo(id, inp.files[0], titulo);
       if (!info.ok) alert('⚠️ Este navegador no puede reproducir ese archivo (' + (info.motivo || 'formato') + ').\nConvertilo a MP4 (H.264) y volvé a elegirlo.');
     });
@@ -585,7 +614,6 @@
       desfase = o.desfase || desfase; alCambiar = o.alCambiar || alCambiar;
       Sonido.crear();
       armarPreparar();
-      precargarBilletes();
       if (new URLSearchParams(location.search).has('preparar')) abrirPreparar();
       informar();
       setInterval(informar, 60000);      // "sigo acá" para el panel

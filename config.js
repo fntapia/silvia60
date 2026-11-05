@@ -16,7 +16,7 @@ window.CONFIG = {
   // --- Fecha y hora (hora de Argentina, -03:00) ---
   // ⚠️ Ahora se cambian desde el PANEL → pestaña "Evento" (se aplica al instante).
   //    Lo de acá es solo el RESPALDO por si la base no responde. Los textos ("Sábado 5 de diciembre", "22 h") se arman solos.
-  fechaEvento: '2026-12-05T22:30:00-03:00',
+  fechaEvento: '2026-12-05T22:00:00-03:00',
   duracionHoras: 5,                      // para el evento del calendario
   textoPuntual: '¡Por favor, sé puntual!',
 
@@ -71,8 +71,6 @@ window.CONFIG = {
 
   // --- Dirección del sitio publicado (la completa la guía, paso 5). Vacío = se detecta sola ---
   sitioUrl: '',
-  // Texto corto que se ve en la pantalla del salón debajo del QR (ej: 'bit.ly/silvia60'). Vacío = el link completo
-  linkCortoTexto: '',
 
   // --- Mensaje de WhatsApp para enviar cada invitación. {nombres} y {link} se reemplazan solos ---
   mensajeWhatsApp: '¡Hola {nombres}! 💛 Silvia cumple 60 y nos encantaría que nos acompañen. Acá está su invitación, con todos los datos y para confirmar asistencia: {link}',
