@@ -254,6 +254,76 @@
           const { error } = await s.from('fotos').update(cambios).eq('id', id);
           if (error) throw traducirError(error);
         },
+        /* ---- Fotos en revisión, por lote (solo admin: lo cuida la RLS de fotos y del almacenamiento) ---- */
+        async contarRevision() {
+          const s = await db();
+          const { count, error } = await s.from('fotos').select('id', { count: 'exact', head: true }).eq('estado', 'revision');
+          if (error) throw traducirError(error);
+          return count || 0;
+        },
+        // Primero copia los archivos al bucket público y recién después publica de a una, de la más vieja a la más nueva:
+        // así entran en orden a la cola del muro. Una foto que falla sigue en revisión y no frena a las demás.
+        async publicarLote(ids, alProgreso) {
+          const s = await db();
+          const filas = [];
+          for (let i = 0; i < ids.length; i += 100) {
+            const { data, error } = await s.from('fotos').select('id,ruta,creado').eq('estado', 'revision').in('id', ids.slice(i, i + 100));
+            if (error) throw traducirError(error);
+            filas.push(...data);
+          }
+          filas.sort((a, b) => a.creado.localeCompare(b.creado));
+          const listas = new Map();
+          let n = 0, hechas = [];
+          await Promise.all([0, 1, 2, 3].map(async () => {
+            while (n < filas.length) {
+              const f = filas[n++];
+              try {
+                if (!f.ruta.startsWith('rev/')) { listas.set(f.id, { ruta: f.ruta }); continue; }
+                const baja = await s.storage.from('revision').download(f.ruta);
+                if (baja.error) throw baja.error;
+                const nueva = 'pub/' + f.ruta.split('/').pop();
+                const up = await s.storage.from('fotos').upload(nueva, baja.data, { contentType: 'image/jpeg', upsert: true });
+                if (up.error) throw up.error;
+                listas.set(f.id, { ruta: nueva, copia: nueva });
+              } catch (e) { console.warn('No se pudo copiar', f.id, e); }
+              alProgreso && alProgreso(listas.size, filas.length);
+            }
+          }));
+          for (const f of filas) {
+            const l = listas.get(f.id);
+            if (!l) continue;
+            const { error } = await s.from('fotos').update({ estado: 'publicada', ruta: l.ruta }).eq('id', f.id).eq('estado', 'revision');
+            if (error) console.warn('No se pudo publicar', f.id, error);
+            else hechas.push({ id: f.id, ruta: f.ruta, copia: l.copia || null });
+          }
+          return { hechas, fallaron: ids.length - hechas.length };
+        },
+        // Descartar = oculta: el archivo no se toca y se puede recuperar desde el filtro "Ocultas"
+        async descartarLote(ids) {
+          const s = await db();
+          const hechas = [];
+          for (let i = 0; i < ids.length; i += 100) {
+            const { data, error } = await s.from('fotos').update({ estado: 'oculta' }).eq('estado', 'revision').in('id', ids.slice(i, i + 100)).select('id,ruta');
+            if (error) throw traducirError(error);
+            data.forEach(f => hechas.push({ id: f.id, ruta: f.ruta, copia: null }));
+          }
+          return { hechas, fallaron: ids.length - hechas.length };
+        },
+        // Vuelve a revisión lo que hizo un lote. Pasa primero por "oculta": la pantalla no puede leer las filas en revisión
+        // (y por eso no se enteraría del cambio), en cambio "oculta" sí le llega y saca la foto del muro al instante.
+        async deshacerLote(hechas) {
+          const s = await db();
+          for (let i = 0; i < hechas.length; i += 100) {
+            const { error } = await s.from('fotos').update({ estado: 'oculta' }).in('id', hechas.slice(i, i + 100).map(h => h.id));
+            if (error) throw traducirError(error);
+          }
+          for (const h of hechas) {
+            const { error } = await s.from('fotos').update({ estado: 'revision', ruta: h.ruta }).eq('id', h.id);
+            if (error) throw traducirError(error);
+          }
+          const copias = hechas.map(h => h.copia).filter(Boolean);
+          if (copias.length) { const r = await s.storage.from('fotos').remove(copias); if (r.error) console.warn('Quedó una copia pública', r.error); }
+        },
         async actualizarPantalla(cambios) {
           const s = await db();
           const { error } = await s.from('pantalla_estado').update(cambios).eq('id', 1);
@@ -459,8 +529,10 @@
       return resto;
     }
 
+    // como en la base real: el archivo vive donde dice su ruta (una descartada sigue en el bucket privado aunque esté "oculta")
+    const bucketDe = f => f.ruta.startsWith('rev/') ? 'revision' : 'fotos';
     async function fotoPublica(f) {
-      return { id: f.id, url: await urlDe(f.estado === 'revision' ? 'revision' : 'fotos', f.ruta), autor: f.autor, leyenda: f.leyenda, creado: f.creado, estado: f.estado };
+      return { id: f.id, url: await urlDe(bucketDe(f), f.ruta), autor: f.autor, leyenda: f.leyenda, creado: f.creado, estado: f.estado };
     }
 
     function preguntasActivas(d) { return d.trivia_preguntas.filter(p => p.activa).sort((a, b) => a.orden - b.orden || a.creado.localeCompare(b.creado)); }
@@ -538,7 +610,7 @@
           d.fotos.push(f);
           return f;
         });
-        if (r.estado !== 'revision') avisar({ tabla: 'fotos', tipo: 'INSERT', fila: r });
+        avisar({ tabla: 'fotos', tipo: 'INSERT', fila: r });   // la pantalla ignora las que no están publicadas; el panel las cuenta
         return { id: r.id, estado: r.estado };
       },
       async adjuntarOriginal(id, ruta, bytes, dispositivo) {
@@ -665,7 +737,7 @@
           exigirAdmin();
           const fs = leer().fotos.slice().reverse();
           return Promise.all(fs.map(async f => Object.assign({}, f, {
-            url: await urlDe(f.estado === 'revision' ? 'revision' : 'fotos', f.ruta),
+            url: await urlDe(bucketDe(f), f.ruta),
             urlOriginal: f.ruta_original ? await urlDe('fotos', f.ruta_original) : null
           })));
         },
@@ -673,7 +745,7 @@
           exigirAdmin();
           if (cambios.estado === 'publicada') {
             const f = leer().fotos.find(x => x.id === id);
-            if (f && f.estado === 'revision') {
+            if (f && f.ruta.startsWith('rev/')) {
               const blob = await idbGet('revision/' + f.ruta);
               const nueva = 'pub/' + f.ruta.split('/').pop();
               await idbPut('fotos/' + nueva, blob);
@@ -682,6 +754,33 @@
           }
           const f = cambiar(d => { const f = d.fotos.find(x => x.id === id); Object.assign(f, cambios); return f; });
           avisar({ tabla: 'fotos', tipo: 'UPDATE', fila: f });
+        },
+        async contarRevision() { exigirAdmin(); return leer().fotos.filter(f => f.estado === 'revision').length; },
+        async publicarLote(ids, alProgreso) {
+          exigirAdmin();
+          const filas = leer().fotos.filter(f => ids.includes(f.id) && f.estado === 'revision').sort((a, b) => a.creado.localeCompare(b.creado));
+          const hechas = [];
+          for (const f of filas) {
+            await espera(60);
+            const r = f.ruta;
+            if (S60.local.leer('demo_falla_lote') === f.id) { S60.local.borrar('demo_falla_lote'); continue; }
+            await this.actualizarFoto(f.id, { estado: 'publicada' });
+            hechas.push({ id: f.id, ruta: r, copia: 'pub/' + r.split('/').pop() });
+            alProgreso && alProgreso(hechas.length, filas.length);
+          }
+          return { hechas, fallaron: ids.length - hechas.length };
+        },
+        async descartarLote(ids) {
+          exigirAdmin();
+          const filas = leer().fotos.filter(f => ids.includes(f.id) && f.estado === 'revision');
+          for (const f of filas) await this.actualizarFoto(f.id, { estado: 'oculta' });
+          return { hechas: filas.map(f => ({ id: f.id, ruta: f.ruta, copia: null })), fallaron: ids.length - filas.length };
+        },
+        async deshacerLote(hechas) {
+          exigirAdmin();
+          // igual que en la base real: la pantalla se entera por el paso a "oculta"
+          for (const h of hechas) await this.actualizarFoto(h.id, { estado: 'oculta' });
+          cambiar(d => { hechas.forEach(h => Object.assign(d.fotos.find(x => x.id === h.id), { estado: 'revision', ruta: h.ruta })); });
         },
         async actualizarPantalla(cambios) {
           exigirAdmin();

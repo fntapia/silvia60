@@ -178,7 +178,9 @@ Cada foto se revisa **en el celular del invitado, antes de subirse**, con una IA
 
 **Detecta bien:** desnudos, pornografía, dibujos sexuales, poses muy provocativas.
 
-**NO detecta:** gestos obscenos (el dedo del medio), textos o carteles ofensivos dentro de la foto, violencia, armas, drogas, ni burlas. Tampoco es infalible: alguna foto en malla o con mucha piel puede ir a revisión sin motivo (la aprobás desde el panel con **Aprobar**).
+**NO detecta:** gestos obscenos (el dedo del medio), textos o carteles ofensivos dentro de la foto, violencia, armas, drogas, ni burlas. Tampoco es infalible: alguna foto en malla o con mucha piel puede ir a revisión sin motivo.
+
+**Revisarlas de a muchas (desde el celular):** cuando hay fotos esperando, la barra del panel muestra **📸 Fotos** con una burbuja roja con el número, y en Itinerario y Pantalla aparece la franja «📸 5 fotos esperando revisión → Revisar». Ahí tocá una foto para verla grande, marcá la casilla de las que quieras y usá **✅ Publicar seleccionadas** o **🗑 Descartar seleccionadas**; también está **✅ Publicar todas**. Las publicadas entran al muro de a una, en orden. Las descartadas no se borran: quedan en el filtro **Ocultas** (con **Mostrar** se publican igual). Tenés **10 segundos para ↩ Deshacer** cada lote; si una foto ya había aparecido en la pantalla, sale al instante.
 
 Las leyendas y los nombres sí pasan por un filtro de malas palabras.
 

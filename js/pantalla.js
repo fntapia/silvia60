@@ -74,6 +74,7 @@
     if (i >= 0) fotos.splice(i, 1);
     const j = colaNuevas.findIndex(x => x.id === id);
     if (j >= 0) colaNuevas.splice(j, 1);
+    vistas.delete(id);   // si la vuelven a publicar (Deshacer y publicar de nuevo), entra con su animación
     // si está a la vista (en el collage, volando o en la lluvia) se saca ya
     slots.forEach(s => { if (s.foto === id) { retirar(s.el); s.el = null; s.foto = null; } });
     document.querySelectorAll(`.pol[data-foto="${id}"]`).forEach(retirar);

@@ -106,6 +106,51 @@ body.con-demo .barra-sup { top: 20px; }
 .foto-botones { display: grid; grid-template-columns: 1fr 52px 52px; gap: 6px; padding: 0 .5rem .6rem; }
 .foto-botones .btn { min-height: 46px; padding: 0 .4rem; font-size: .95rem; }
 
+/* ---------- Fotos en revisión: aviso y resolución por lote ---------- */
+.pestanas button { position: relative; }
+.pestanas .corto { display: none; }
+.burbuja { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #e0362c; color: #fff; font-style: normal; font-size: .74rem; font-weight: 800; line-height: 20px; text-align: center; box-shadow: 0 0 0 2px #fff; font-variant-numeric: lining-nums tabular-nums; }
+.aviso-rev { display: block; width: 100%; min-height: 44px; margin: 0 0 .8rem; padding: .4rem .9rem; border: 1.5px solid #e0362c; border-radius: 12px; background: #fdf1f0; color: #93392a; font-weight: 700; font-size: .95rem; text-align: left; cursor: pointer; }
+#filtrosFotos.hay-rev #filtroRevision { order: -1; }
+.rev-herr { margin-bottom: .8rem; }
+.rev-sel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: .6rem; }
+.rev-sel b { margin-left: auto; color: var(--oro-texto); font-variant-numeric: lining-nums tabular-nums; }
+.rev-sel .btn { padding: 0 .8rem; }
+.rev-pub-todas { min-height: 52px; font-weight: 700; }
+.galeria-rev { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.rev-vacio { grid-column: 1 / -1; }
+.rev-card { position: relative; background: #fff; border: 2px solid var(--linea); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.rev-card.elegida { border-color: var(--oro); box-shadow: 0 0 0 2px var(--oro); }
+.rev-ver { display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; background: var(--crema); cursor: zoom-in; }
+.rev-ver img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rev-check { position: absolute; top: 0; left: 0; padding: 6px; cursor: pointer; }
+.rev-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.rev-check span { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; border: 2.5px solid #fff; background: rgba(26, 26, 26, .45); color: transparent; font-size: 1.5rem; font-weight: 800; box-shadow: 0 1px 5px rgba(0, 0, 0, .45); }
+.rev-check input:checked + span { background: #B8860B; color: #fff; }
+.rev-check input:focus-visible + span { outline: 3px solid var(--oro); outline-offset: 1px; }
+.rev-info { padding: .45rem .6rem .55rem; font-size: .88rem; line-height: 1.25; overflow-wrap: anywhere; }
+.rev-info p { margin: 0 0 .15rem; }
+.rev-motivo { color: var(--error); font-size: .78rem; }
+.rev-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px max(14px, calc((100% - 1100px) / 2)); background: rgba(255, 255, 255, .97); border-top: 1px solid var(--linea); box-shadow: 0 -6px 20px rgba(0, 0, 0, .08); }
+.rev-barra .btn { min-height: 60px; padding: .3rem .5rem; line-height: 1.2; white-space: normal; font-weight: 700; }
+.rev-barra .btn:disabled { opacity: .45; }
+.rev-barra .btn-peligro { background: #fff; }
+body.con-rev-barra .contenido-panel { padding-bottom: 110px; }
+.deshacer { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 8000; display: flex; align-items: center; justify-content: space-between; gap: 10px; width: min(calc(100vw - 20px), 460px); padding: 8px 8px 8px 14px; border-radius: 14px; background: #1A1A1A; color: #fff; font-weight: 700; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.deshacer .btn { flex: none; background: #F5D97A; border-color: #F5D97A; color: #1A1A1A; font-weight: 800; font-variant-numeric: lining-nums tabular-nums; padding: 0 .8rem; }
+.modal.modal-medio { align-items: center; }
+.modal-medio .fila-botones { display: grid; grid-template-columns: 1fr; }
+.modal-medio .fila-botones .btn { min-height: 56px; }
+.modal-medio .modal-caja { max-width: 440px; }
+.confirmar-txt { margin: 0 0 1rem; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+.foto-grande { position: fixed; inset: 0; z-index: 9100; display: flex; flex-direction: column; background: #111; color: #fff; }
+.foto-grande img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+.fg-pie { padding: .6rem .8rem calc(.7rem + env(safe-area-inset-bottom)); background: #1A1A1A; }
+.fg-pie p { margin: 0 0 .5rem; font-size: .95rem; overflow-wrap: anywhere; }
+.fg-botones { display: grid; grid-template-columns: 52px 1fr 52px 52px; gap: 6px; max-width: 520px; margin: 0 auto; }
+.fg-botones .btn { min-height: 56px; padding: 0; font-size: 1.05rem; }
+.fg-botones .btn:not(.btn-oro) { background: #333; border-color: #555; color: #fff; font-size: 1.4rem; }
+
 /* ---------- Control remoto (pantalla y trivia) ---------- */
 .control-remoto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: .6rem 0 .8rem; }
 .control-remoto .control { min-height: 70px; border-radius: 18px; font-size: 1.05rem; padding: .5rem .7rem; line-height: 1.2; white-space: normal; }
@@ -296,6 +341,19 @@ body.con-demo .barra-sup { top: 20px; }
     border-top: 1px solid var(--linea); border-bottom: 0; box-shadow: 0 -6px 20px rgba(0, 0, 0, .06); display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
   .pestanas button { flex-direction: column; justify-content: center; gap: 2px; min-height: 58px; padding: 4px 2px; border-radius: 12px; border: 0; font-size: 1.25rem; margin: 0; }
   .pestanas button b { font-size: .64rem; font-weight: 700; letter-spacing: -.01em; }
+  /* con Fotos en la barra entran 7 */
+  .pestanas.con-fotos { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; }
+  .pestanas.con-fotos button { padding-inline: 0; min-width: 0; }
+  .pestanas.con-fotos button b { font-size: .6rem; letter-spacing: -.02em; }
+  .pestanas.con-fotos .largo { display: none; }
+  .pestanas.con-fotos .corto { display: inline; }
+  .burbuja { position: absolute; top: 2px; left: calc(50% + 2px); }
+  .aviso-rev { font-size: .86rem; padding-inline: .6rem; }
+  .rev-barra { bottom: calc(66px + env(safe-area-inset-bottom)); padding-inline: 10px; }
+  body.con-rev-barra .contenido-panel { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
+  .galeria-rev { grid-template-columns: 1fr 1fr; }
+  .deshacer { bottom: calc(146px + env(safe-area-inset-bottom)); }
+  body.con-rev-barra .toast-zona { bottom: calc(205px + env(safe-area-inset-bottom)); }
   .pestanas button[aria-selected="true"] { background: var(--oro-brillo); color: var(--oro-texto); margin: 0; }
   .familia-botones .btn { font-size: .88rem; padding: .3rem .25rem; white-space: nowrap; letter-spacing: -.01em; }
   .control-remoto .control { min-height: 76px; }

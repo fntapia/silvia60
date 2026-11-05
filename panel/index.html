@@ -35,7 +35,7 @@
       <div class="menu-sup">
         <button class="btn-menu" id="btnMenu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Menú">☰</button>
         <div class="menu-lista oculto" id="menuLista" role="menu">
-          <button role="menuitem" type="button" data-tab="fotos">📸 Fotos (galería)</button>
+          <button role="menuitem" type="button" data-tab="fotos" id="menuFotos">📸 Fotos (galería)</button>
           <button role="menuitem" type="button" data-tab="evento">🗓 Evento (fecha y hora)</button>
           <hr class="menu-sep">
           <a role="menuitem" href="../pantalla/" target="_blank" rel="noopener">📺 Abrir pantalla del salón ↗</a>
@@ -49,11 +49,13 @@
     <!-- Pestañas: arriba en compu, barra fija abajo en el celular -->
     <nav class="pestanas" id="pestanas" role="tablist">
       <button role="tab" data-tab="invitados" aria-selected="true"><span aria-hidden="true">👥</span><b>Invitados</b></button>
-      <button role="tab" data-tab="confirmaciones"><span aria-hidden="true">✅</span><b>Confirmados</b></button>
+      <button role="tab" data-tab="confirmaciones"><span aria-hidden="true">✅</span><b>Confirm<span class="largo">ados</span><span class="corto">.</span></b></button>
       <button role="tab" data-tab="itinerario"><span aria-hidden="true">🕒</span><b>Itinerario</b></button>
       <button role="tab" data-tab="pantalla"><span aria-hidden="true">📺</span><b>Pantalla</b></button>
       <button role="tab" data-tab="videos"><span aria-hidden="true">🎬</span><b>Videos</b></button>
       <button role="tab" data-tab="trivia"><span aria-hidden="true">🎯</span><b>Trivia</b></button>
+      <!-- Aparece cuando hay fotos esperando revisión (el resto del tiempo Fotos está en el menú ☰) -->
+      <button role="tab" data-tab="fotos" id="tabFotos" class="oculto"><span aria-hidden="true">📸</span><b>Fotos</b><i class="burbuja oculto" id="burbujaFotos"></i></button>
     </nav>
     <!-- Cuenta para el DJ después de lanzar "¡Arranca la fiesta!" -->
     <div class="boom-cuenta oculto" id="boomCuenta" role="status" aria-live="assertive"></div>
@@ -123,15 +125,29 @@
           <button data-f="todas" class="activo">Todas</button>
           <button data-f="publicada">Publicadas</button>
           <button data-f="oculta">Ocultas</button>
-          <button data-f="revision">En revisión</button>
+          <button data-f="revision" id="filtroRevision">En revisión</button>
           <button data-f="favorita">⭐</button>
         </div>
         <p class="suave chico" id="zipProgreso"></p>
+        <!-- Vista "En revisión": selección por lote -->
+        <div class="rev-herr oculto" id="revHerr">
+          <div class="rev-sel">
+            <button class="btn btn-chico" type="button" id="revTodas">Seleccionar todas</button>
+            <button class="btn btn-chico" type="button" id="revNinguna">Ninguna</button>
+            <b id="revContador" aria-live="polite"></b>
+          </div>
+          <button class="btn btn-bloque rev-pub-todas" type="button" id="revPublicarTodas"></button>
+        </div>
         <div class="galeria" id="galeria"></div>
+        <div class="rev-barra oculto" id="revBarra">
+          <button class="btn btn-oro" type="button" id="revPublicar">✅ Publicar seleccionadas</button>
+          <button class="btn btn-peligro" type="button" id="revDescartar">🗑 Descartar seleccionadas</button>
+        </div>
       </section>
 
       <!-- ITINERARIO: horas encadenadas (inicio del evento + duraciones) -->
       <section class="tab oculto" id="tab-itinerario">
+        <button class="aviso-rev oculto" type="button"></button>
         <div class="fila-titulo">
           <h2 class="titulo">Itinerario</h2>
           <button class="btn btn-chico" id="btnCopiarItinerario" type="button">📋 Copiar como texto</button>
@@ -163,6 +179,7 @@
 
       <!-- PANTALLA: control remoto -->
       <section class="tab oculto" id="tab-pantalla">
+        <button class="aviso-rev oculto" type="button"></button>
         <h2 class="titulo">Pantalla del salón</h2>
         <p class="en-vivo"><span class="punto" aria-hidden="true"></span><span>En el salón ahora: <b class="en-vivo-txt">…</b></span></p>
         <p class="estado-trivia" id="estadoPantalla"></p>
@@ -285,6 +302,37 @@
         </form>
       </section>
     </main>
+  </div>
+
+  <!-- Lote de fotos: mensaje con "Deshacer" (10 s) -->
+  <div class="deshacer oculto" id="deshacer" role="status">
+    <span id="deshacerTxt"></span>
+    <button class="btn btn-chico" type="button" id="btnDeshacer"></button>
+  </div>
+
+  <!-- Confirmación dentro de la página (fotos) -->
+  <div class="modal modal-medio oculto" id="modalConfirmar" role="dialog" aria-modal="true" aria-labelledby="confirmarTxt">
+    <div class="tarjeta modal-caja">
+      <p class="confirmar-txt" id="confirmarTxt"></p>
+      <div class="fila-botones dos">
+        <button class="btn btn-oro" type="button" id="confirmarSi"></button>
+        <button class="btn" type="button" id="confirmarNo">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Una foto en revisión, en grande -->
+  <div class="foto-grande oculto" id="fotoGrande" role="dialog" aria-modal="true" aria-label="Foto en grande">
+    <img id="fgImg" alt="">
+    <div class="fg-pie">
+      <p id="fgInfo"></p>
+      <div class="fg-botones">
+        <button class="btn" type="button" id="fgAnterior" aria-label="Foto anterior">‹</button>
+        <button class="btn btn-oro" type="button" id="fgElegir"></button>
+        <button class="btn" type="button" id="fgSiguiente" aria-label="Foto siguiente">›</button>
+        <button class="btn" type="button" id="fgCerrar" aria-label="Cerrar">✕</button>
+      </div>
+    </div>
   </div>
 
   <!-- Editor de un momento del itinerario -->

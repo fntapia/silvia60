@@ -44,7 +44,13 @@
     $('#panel').classList.remove('oculto');
     abrirTab(location.hash.slice(1) || 'invitados');
     cargarTodo();
-    Datos.escucharFotos(() => { if (tabActual === 'fotos') cargarFotos(); });
+    let fotosDemora = null;
+    Datos.escucharFotos(() => {   // varias fotos juntas (un lote) cuentan como un solo cambio
+      clearTimeout(fotosDemora);
+      fotosDemora = setTimeout(() => { contarRevision(); if (tabActual === 'fotos') cargarFotos(); }, 800);
+    });
+    contarRevision();
+    setInterval(contarRevision, 15000);   // por si se corta el tiempo real
     Datos.trivia.escuchar(e => { triviaEstado = Object.assign(triviaEstado, e); pintarEstadoTrivia(); pintarEnVivo(); });
     Datos.escucharPantalla(p => { pantallaEstado = Object.assign(pantallaEstado, p); pintarPantalla(); pintarEnVivo(); alCambiarPantalla(); });
     setInterval(pintarEstadoTrivia, 4000);
@@ -109,7 +115,11 @@
     $('#tituloSeccion').textContent = TITULOS[t];
     history.replaceState(null, '', '#' + t);
     scrollTo(0, 0);
-    if (t === 'fotos') cargarFotos();
+    pintarAvisoRevision();
+    if (t === 'fotos') {
+      if (enRevision > 0) elegirFiltro('revision');
+      cargarFotos().then(() => { if (tabActual === 'fotos' && enRevision > 0) elegirFiltro('revision'); });
+    }
     if (t === 'confirmaciones') cargarRsvps();
     if (t === 'evento') pintarEvento();
     if (t === 'itinerario') cargarItinerario();
@@ -353,17 +363,227 @@
   async function cargarFotos() {
     if (cargandoFotos) return cargandoFotos;
     cargandoFotos = (async () => {
-      try { fotos = await A.fotos(); } catch (e) { toast(e.message, 'error'); }
-      pintarFotos();
+      try {
+        // el link firmado de cada foto en revisión cambia en cada carga: se reusa para que las miniaturas no parpadeen
+        fotos = (await A.fotos()).map(f => {
+          if (!f.ruta.startsWith('rev/')) return f;
+          const c = urlsRev.get(f.id);
+          if (c && c.ruta === f.ruta && Date.now() - c.t < 5 * 3600e3) f.url = c.url;
+          else urlsRev.set(f.id, { url: f.url, ruta: f.ruta, t: Date.now() });
+          return f;
+        });
+        enRevision = fotos.filter(f => f.estado === 'revision').length;
+        pintarAvisoRevision();
+      } catch (e) { toast(e.message, 'error'); }
+      if (!loteEnCurso) pintarFotos();
     })();
     try { await cargandoFotos; } finally { cargandoFotos = null; }
   }
+
+  /* ---------- Aviso de fotos esperando revisión ---------- */
+  const urlsRev = new Map();
+  let enRevision = 0;
+  async function contarRevision() {
+    try { enRevision = await A.contarRevision(); pintarAvisoRevision(); } catch (e) {}
+  }
+  function pintarAvisoRevision() {
+    const n = enRevision, hay = n > 0;
+    const burbuja = $('#burbujaFotos');
+    burbuja.textContent = n > 99 ? '99+' : n;
+    burbuja.classList.toggle('oculto', !hay);
+    burbuja.setAttribute('aria-label', `${n} en revisión`);
+    $('#tabFotos').classList.toggle('oculto', !hay && tabActual !== 'fotos');
+    $('#pestanas').classList.toggle('con-fotos', hay || tabActual === 'fotos');
+    $('#menuFotos').textContent = hay ? `📸 Fotos (🔴 ${n} en revisión)` : '📸 Fotos (galería)';
+    $$('.aviso-rev').forEach(b => {
+      b.classList.toggle('oculto', !hay);
+      b.textContent = `📸 ${n} ${n === 1 ? 'foto esperando' : 'fotos esperando'} revisión → Revisar`;
+    });
+    const f = $('#filtroRevision');
+    f.textContent = hay ? `🔴 En revisión (${n})` : 'En revisión';
+    $('#filtrosFotos').classList.toggle('hay-rev', hay);
+  }
+  $$('.aviso-rev').forEach(b => b.addEventListener('click', () => abrirTab('fotos')));
+
+  /* ---------- Fotos en revisión: elegir y resolver de a muchas ---------- */
+  const elegidas = new Set();
+  let firmaRev = '', loteEnCurso = false;
+  const listaRevision = () => fotos.filter(f => f.estado === 'revision').sort((a, b) => a.creado.localeCompare(b.creado));   // en el orden en que llegaron
+
+  function pintarRevision() {
+    const lista = listaRevision();
+    const ids = new Set(lista.map(f => f.id));
+    elegidas.forEach(id => { if (!ids.has(id)) elegidas.delete(id); });
+    $('#revHerr').classList.toggle('oculto', !lista.length);
+    $('#revBarra').classList.toggle('oculto', !lista.length);
+    document.body.classList.toggle('con-rev-barra', lista.length > 0);
+    const galeria = $('#galeria');
+    galeria.classList.add('galeria-rev');
+    if (!lista.length) { firmaRev = ''; galeria.innerHTML = '<p class="vacio-tabla rev-vacio">✔ No hay fotos esperando revisión.</p>'; cerrarGrande(); return; }
+    $('#revPublicarTodas').textContent = `✅ Publicar todas (${lista.length})`;
+    const firma = lista.map(f => f.id).join();
+    if (firma !== firmaRev) {   // si no cambió la lista no se repinta: no mueve el dedo ni las imágenes
+      firmaRev = firma;
+      galeria.innerHTML = lista.map(f => {
+        const p = f.puntajes ? Object.entries(f.puntajes).filter(([k, v]) => /porn|hentai|sexy/i.test(k) && typeof v === 'number').sort((a, b) => b[1] - a[1])[0] : null;
+        return `<article class="rev-card" data-id="${f.id}">
+          <button class="rev-ver" type="button" aria-label="Ver grande la foto de ${esc(f.autor)}"><img loading="lazy" src="${esc(f.url || '')}" alt=""></button>
+          <label class="rev-check"><input type="checkbox" aria-label="Seleccionar la foto de ${esc(f.autor)}"><span aria-hidden="true">✓</span></label>
+          <div class="rev-info"><p><b>${esc(f.autor)}</b> <small class="suave">${S60.formatoHora(f.creado)}</small></p>${f.leyenda ? `<p><i>“${esc(f.leyenda)}”</i></p>` : ''}${p ? `<p class="rev-motivo">${esc(p[0])} ${Math.round(p[1] * 100)}%</p>` : ''}</div>
+        </article>`;
+      }).join('');
+    }
+    pintarElegidas();
+  }
+  function pintarElegidas() {
+    $$('#galeria .rev-card').forEach(c => {
+      const si = elegidas.has(c.dataset.id);
+      c.classList.toggle('elegida', si);
+      c.querySelector('input').checked = si;
+    });
+    const n = elegidas.size;
+    $('#revContador').textContent = `${n} ${n === 1 ? 'seleccionada' : 'seleccionadas'}`;
+    $('#revPublicar').disabled = $('#revDescartar').disabled = !n || loteEnCurso;
+    $('#revPublicarTodas').disabled = loteEnCurso;
+    $('#revTodas').disabled = $('#revNinguna').disabled = loteEnCurso;
+  }
+  $('#revTodas').addEventListener('click', () => { listaRevision().forEach(f => elegidas.add(f.id)); pintarElegidas(); });
+  $('#revNinguna').addEventListener('click', () => { elegidas.clear(); pintarElegidas(); });
+  $('#galeria').addEventListener('change', e => {
+    const c = e.target.closest('.rev-card'); if (!c || loteEnCurso) { if (c) e.target.checked = elegidas.has(c.dataset.id); return; }
+    if (e.target.checked) elegidas.add(c.dataset.id); else elegidas.delete(c.dataset.id);
+    pintarElegidas();
+  });
+
+  // Confirmación dentro de la página: promete true / false
+  function confirmar(texto, botonSi) {
+    return new Promise(listo => {
+      const m = $('#modalConfirmar'), si = $('#confirmarSi'), no = $('#confirmarNo');
+      $('#confirmarTxt').textContent = texto;
+      si.textContent = botonSi;
+      m.classList.remove('oculto');
+      si.focus();
+      const fin = r => { m.classList.add('oculto'); si.onclick = no.onclick = null; listo(r); };
+      si.onclick = () => fin(true);
+      no.onclick = () => fin(false);
+    });
+  }
+  const textoFotos = n => `${n} ${n === 1 ? 'foto' : 'fotos'}`;
+  // las de "Publicar todas" son las que se ven al abrir el aviso: una que llega mientras tanto no se publica sin que la mires
+  $('#revPublicarTodas').addEventListener('click', async () => {
+    const ids = listaRevision().map(f => f.id);
+    const n = ids.length;
+    if (await confirmar(`¿Publicar ${n === 1 ? 'la foto' : `las ${n} fotos`} en revisión? Revisá la grilla antes`, `✅ Publicar ${n === 1 ? 'la foto' : `las ${n}`}`)) resolverLote('publicar', ids);
+  });
+  $('#revPublicar').addEventListener('click', async () => {
+    const ids = [...elegidas], n = ids.length;
+    if (await confirmar(`¿Publicar ${textoFotos(n)} en el muro?`, '✅ Publicar')) resolverLote('publicar', ids);
+  });
+  $('#revDescartar').addEventListener('click', async () => {
+    const ids = [...elegidas], n = ids.length;
+    if (await confirmar(`¿Descartar ${textoFotos(n)}? No se ${n === 1 ? 'muestra' : 'muestran'} en el muro y ${n === 1 ? 'queda' : 'quedan'} en «Ocultas».`, '🗑 Descartar')) resolverLote('descartar', ids);
+  });
+
+  async function resolverLote(accion, ids) {
+    if (loteEnCurso || !ids.length) return;
+    loteEnCurso = true;
+    pintarElegidas();
+    const btn = accion === 'publicar' ? $('#revPublicar') : $('#revDescartar');
+    const textoBtn = btn.textContent;
+    btn.textContent = accion === 'publicar' ? `Publicando ${ids.length}…` : `Descartando ${ids.length}…`;
+    let r = null;
+    try {
+      r = accion === 'publicar' ? await A.publicarLote(ids) : await A.descartarLote(ids);
+      const hechos = new Set(r.hechas.map(h => h.id));
+      elegidas.forEach(id => { if (hechos.has(id)) elegidas.delete(id); });   // la que falló sigue elegida para reintentar
+    } catch (e) { toast(e.message || 'No se pudo: probá de nuevo', 'error', 6000); }
+    btn.textContent = textoBtn;
+    loteEnCurso = false;
+    await cargarFotos();
+    contarRevision();
+    if (!r) return;
+    if (r.hechas.length) ofrecerDeshacer(accion, r.hechas);
+    if (r.fallaron) toast(`${textoFotos(r.fallaron)} no se ${r.fallaron === 1 ? 'pudo' : 'pudieron'} ${accion}: ${r.fallaron === 1 ? 'sigue' : 'siguen'} en revisión. Probá de nuevo.`, 'error', 7000);
+  }
+
+  /* ---------- Deshacer (10 s) ---------- */
+  let relojDeshacer = null, loteDeshacer = null;
+  function ofrecerDeshacer(accion, hechas) {
+    const n = hechas.length;
+    clearInterval(relojDeshacer);
+    loteDeshacer = hechas;
+    $('#deshacerTxt').textContent = accion === 'publicar' ? `✅ ${textoFotos(n)} ${n === 1 ? 'publicada' : 'publicadas'}` : `🗑 ${n} ${n === 1 ? 'descartada' : 'descartadas'}`;
+    let quedan = 10;
+    const pintar = () => { $('#btnDeshacer').textContent = `↩ Deshacer (${quedan})`; };
+    pintar();
+    $('#btnDeshacer').disabled = false;
+    $('#deshacer').classList.remove('oculto');
+    relojDeshacer = setInterval(() => { if (--quedan <= 0) cerrarDeshacer(); else pintar(); }, 1000);
+  }
+  function cerrarDeshacer() { clearInterval(relojDeshacer); loteDeshacer = null; $('#deshacer').classList.add('oculto'); }
+  $('#btnDeshacer').addEventListener('click', async () => {
+    const lote = loteDeshacer; if (!lote) return;
+    clearInterval(relojDeshacer);
+    $('#btnDeshacer').disabled = true;
+    $('#btnDeshacer').textContent = 'Deshaciendo…';
+    try {
+      await A.deshacerLote(lote);
+      toast(`↩ ${lote.length === 1 ? 'La foto volvió' : `Las ${lote.length} fotos volvieron`} a revisión`);
+    } catch (e) { toast(e.message || 'No se pudo deshacer', 'error', 6000); }
+    cerrarDeshacer();
+    await cargarFotos();
+    contarRevision();
+  });
+
+  /* ---------- Una foto en grande ---------- */
+  let fotoGrandeId = null;
+  function verGrande(id) {
+    const f = listaRevision().find(x => x.id === id); if (!f) { cerrarGrande(); return; }
+    fotoGrandeId = id;
+    $('#fgImg').src = f.url || '';
+    $('#fgImg').alt = `Foto de ${f.autor}`;
+    $('#fgInfo').innerHTML = `<b>📸 ${esc(f.autor)}</b>${f.leyenda ? ` · <i>“${esc(f.leyenda)}”</i>` : ''}`;
+    $('#fgElegir').textContent = elegidas.has(id) ? '✓ Seleccionada' : 'Seleccionar';
+    $('#fotoGrande').classList.remove('oculto');
+  }
+  function cerrarGrande() { fotoGrandeId = null; $('#fotoGrande').classList.add('oculto'); $('#fgImg').removeAttribute('src'); }
+  function moverGrande(paso) {
+    const l = listaRevision(), i = l.findIndex(x => x.id === fotoGrandeId);
+    if (l.length) verGrande(l[(i + paso + l.length) % l.length].id);
+  }
+  $('#fgCerrar').addEventListener('click', cerrarGrande);
+  $('#fgAnterior').addEventListener('click', () => moverGrande(-1));
+  $('#fgSiguiente').addEventListener('click', () => moverGrande(1));
+  $('#fgElegir').addEventListener('click', () => {
+    if (elegidas.has(fotoGrandeId)) elegidas.delete(fotoGrandeId); else elegidas.add(fotoGrandeId);
+    pintarElegidas();
+    verGrande(fotoGrandeId);
+  });
+  document.addEventListener('keydown', e => {
+    if ($('#fotoGrande').classList.contains('oculto')) return;
+    if (e.key === 'Escape') cerrarGrande();
+    else if (e.key === 'ArrowLeft') moverGrande(-1);
+    else if (e.key === 'ArrowRight') moverGrande(1);
+  });
+
+  function elegirFiltro(f) {
+    filtroFotos = f;
+    $$('#filtrosFotos button').forEach(x => x.classList.toggle('activo', x.dataset.f === f));
+    pintarFotos();
+  }
+
   function pintarFotos() {
     const bytes = fotos.reduce((a, f) => a + (f.bytes || 0), 0);
     const pct = Math.min(100, bytes / (1024 * 1048576) * 100);
     const cuenta = e => fotos.filter(f => f.estado === e).length;
     $('#uso').innerHTML = `${fotos.length} fotos · ${cuenta('publicada')} publicadas · ${cuenta('oculta')} ocultas · ${cuenta('revision')} en revisión · ${fotos.filter(f => f.favorita).length} ⭐<br>
       Espacio usado: ${(bytes / 1048576).toFixed(1)} MB de 1024 MB (plan gratis)<div class="medidor"><i style="width:${pct}%"></i></div>`;
+    if (filtroFotos === 'revision') { pintarRevision(); return; }
+    firmaRev = '';
+    $('#revHerr').classList.add('oculto');
+    $('#revBarra').classList.add('oculto');
+    document.body.classList.remove('con-rev-barra');
+    $('#galeria').classList.remove('galeria-rev');
     const lista = fotos.filter(f => filtroFotos === 'todas' || (filtroFotos === 'favorita' ? f.favorita : f.estado === filtroFotos));
     if (!lista.length) { $('#galeria').innerHTML = '<p class="suave">No hay fotos acá.</p>'; return; }
     const etq = { publicada: '<span class="pill si">Publicada</span>', oculta: '<span class="pill sin">Oculta</span>', revision: '<span class="pill no">En revisión</span>' };
@@ -381,18 +601,18 @@
   }
   $('#filtrosFotos').addEventListener('click', e => {
     const b = e.target.closest('button[data-f]'); if (!b) return;
-    filtroFotos = b.dataset.f;
-    $$('#filtrosFotos button').forEach(x => x.classList.toggle('activo', x === b));
-    pintarFotos();
+    elegirFiltro(b.dataset.f);
   });
   $('#galeria').addEventListener('click', async e => {
+    const ver = e.target.closest('.rev-ver');
+    if (ver) { verGrande(ver.closest('.rev-card').dataset.id); return; }
     const b = e.target.closest('button[data-a]'); if (!b) return;
     const f = fotos.find(x => x.id === b.closest('.foto-card').dataset.id);
     const a = b.dataset.a;
     await conBoton(b, async () => {
       if (a === 'ocultar') { await A.actualizarFoto(f.id, { estado: 'oculta' }); f.estado = 'oculta'; toast('Foto oculta: ya no se ve en la pantalla'); }
       else if (a === 'mostrar') { await A.actualizarFoto(f.id, { estado: 'publicada' }); f.estado = 'publicada'; }
-      else if (a === 'aprobar') { if (!confirm('¿Seguro que esta foto se puede mostrar en la pantalla?')) return; await A.actualizarFoto(f.id, { estado: 'publicada' }); await cargarFotos(); return; }
+      else if (a === 'aprobar') { if (!(await confirmar('¿Seguro que esta foto se puede mostrar en la pantalla?', '✅ Publicar'))) return; await A.actualizarFoto(f.id, { estado: 'publicada' }); await cargarFotos(); contarRevision(); return; }
       else if (a === 'favorita') { await A.actualizarFoto(f.id, { favorita: !f.favorita }); f.favorita = !f.favorita; }
       else if (a === 'bajar') { const r = await fetch(f.urlOriginal || f.url); S60.descargarArchivo(await r.blob(), nombreArchivo(f, fotos.indexOf(f))); return; }
       pintarFotos();
@@ -429,7 +649,7 @@
       $('#zipProgreso').textContent = `Listo: ${hechas} ${hechas === 1 ? 'foto descargada' : 'fotos descargadas'} ✔`;
     });
   }
-  $('#btnZipTodas').addEventListener('click', async e => { const b = e.currentTarget; await cargarFotos(); descargarZip(fotos.filter(f => f.estado !== 'revision'), 'fotos-silvia60', b); });
+  $('#btnZipTodas').addEventListener('click', async e => { const b = e.currentTarget; await cargarFotos(); descargarZip(fotos.filter(f => f.estado !== 'revision' && !f.ruta.startsWith('rev/')), 'fotos-silvia60', b); });   // las descartadas no van
   $('#btnZipFavoritas').addEventListener('click', async e => { const b = e.currentTarget; await cargarFotos(); descargarZip(fotos.filter(f => f.favorita), 'favoritas-silvia60', b); });
 
   /* ====================== TRIVIA ====================== */
