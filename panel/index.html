@@ -37,6 +37,7 @@
         <div class="menu-lista oculto" id="menuLista" role="menu">
           <button role="menuitem" type="button" data-tab="fotos" id="menuFotos">📸 Fotos (galería)</button>
           <button role="menuitem" type="button" data-tab="evento">🗓 Evento (fecha y hora)</button>
+          <button role="menuitem" type="button" id="btnMarcarTodasEnviadas">📤 Marcar todas las que tienen teléfono como enviadas</button>
           <hr class="menu-sep">
           <a role="menuitem" href="../pantalla/" target="_blank" rel="noopener">📺 Abrir pantalla del salón ↗</a>
           <a role="menuitem" href="../" target="_blank" rel="noopener">💌 Ver la invitación ↗</a>
@@ -86,6 +87,15 @@
             <button class="btn" type="button" id="btnCancelarGrupo">Cancelar</button>
           </div>
         </form>
+        <p class="envio-resumen" id="envioResumen" aria-live="polite"></p>
+        <p class="sello-cerrado oculto" id="selloCerrado">🔒 Confirmaciones cerradas · igual podés cargar a mano con «✍ Confirmar por ellos»</p>
+        <div class="filtros" id="filtrosGrupos">
+          <button type="button" data-f="todos" class="activo">Todos</button>
+          <button type="button" data-f="sinenviar">Sin enviar</button>
+          <button type="button" data-f="pendientes">Pendientes</button>
+          <button type="button" data-f="vienen">Vienen</button>
+          <button type="button" data-f="novan">No van</button>
+        </div>
         <div class="tarjetas" id="listaGrupos"></div>
         <p class="centro"><a class="link-boton" href="../invitados-ejemplo.csv" download>Ver ejemplo de CSV</a></p>
       </section>
@@ -97,7 +107,22 @@
           <button class="btn btn-chico" id="btnExportarRsvp" type="button">⬇ Excel</button>
         </div>
         <div class="tarjetas-num" id="numeros"></div>
+        <div class="fila-botones dos lista-silvia">
+          <button class="btn btn-oro" id="btnImagenSilvia" type="button">🖼 Imagen para Silvia</button>
+          <button class="btn" id="btnPdfSilvia" type="button">📄 PDF</button>
+        </div>
+        <p class="suave chico" id="listaSilviaEstado" aria-live="polite"></p>
         <h3 class="subtitulo">Respuestas</h3>
+        <div class="filtros" id="filtrosRsvp">
+          <button data-f="todas" class="activo">Todas</button>
+          <button data-f="sin">Sin respuesta</button>
+          <button data-f="nose">Todavía no sabe</button>
+          <button data-f="si">Vienen</button>
+          <button data-f="no">No van</button>
+        </div>
+        <div class="pend-herr oculto" id="pendHerr">
+          <button class="btn btn-chico" id="btnCopiarPendientes" type="button">📋 Copiar lista de pendientes</button>
+        </div>
         <div class="tarjetas" id="listaRsvp"></div>
         <div class="fila-titulo">
           <h3 class="subtitulo">🎶 Playlist</h3>
@@ -152,6 +177,7 @@
           <h2 class="titulo">Itinerario</h2>
           <button class="btn btn-chico" id="btnCopiarItinerario" type="button">📋 Copiar como texto</button>
         </div>
+        <a class="btn btn-bloque btn-imprimir-iti" id="btnImprimirItinerario" href="imprimir.html" target="_blank" rel="noopener">🖨 Itinerario para imprimir / PDF</a>
         <div class="aviso-sql oculto" id="itiAviso"></div>
         <div id="itiCuerpo">
           <div class="iti-resumen">
@@ -304,6 +330,57 @@
     </main>
   </div>
 
+  <!-- Confirmar por una familia (la misma confirmación que su link) -->
+  <div class="modal oculto" id="modalPorEllos" role="dialog" aria-modal="true" aria-labelledby="tituloPorEllos">
+    <form class="tarjeta modal-caja" id="formPorEllos" novalidate>
+      <h3 class="titulo" id="tituloPorEllos">✍ Confirmar por ellos</h3>
+      <p class="por-ellos-antes" id="porEllosAntes"></p>
+      <fieldset class="asiste-panel">
+        <legend>¿Vienen?</legend>
+        <label><input type="radio" name="asiste" value="si"><span>🥳 Sí</span></label>
+        <label><input type="radio" name="asiste" value="no"><span>💛 No</span></label>
+        <label><input type="radio" name="asiste" value="nose"><span>🤔 Todavía no sabe</span></label>
+      </fieldset>
+      <div id="porEllosSi" class="oculto">
+        <div id="porEllosIntegrantes">
+          <p class="etiqueta">¿Quiénes vienen?</p>
+          <div class="integ-lista" id="porEllosLista"></div>
+          <p class="suave chico" id="porEllosCuenta"></p>
+        </div>
+        <div id="porEllosCantidad" class="grilla-form">
+          <label class="campo"><span>¿Cuántos vienen?</span><input type="number" name="cantidad" min="1" inputmode="numeric"></label>
+          <label class="campo"><span>Nombres <small>(opcional)</small></span><input type="text" name="nombres" maxlength="400" placeholder="Marta y Carlos"></label>
+        </div>
+        <p class="etiqueta">🎶 Canciones <small class="suave">(opcional)</small></p>
+        <div class="grilla-form">
+          <label class="campo"><span>Tema</span><input type="text" name="tema0" maxlength="100"></label>
+          <label class="campo"><span>Artista</span><input type="text" name="artista0" maxlength="100"></label>
+          <label class="campo"><span>Tema</span><input type="text" name="tema1" maxlength="100"></label>
+          <label class="campo"><span>Artista</span><input type="text" name="artista1" maxlength="100"></label>
+        </div>
+      </div>
+      <label class="campo"><span>🔒 Nota interna <small>(solo la ves vos)</small></span><textarea name="nota" maxlength="500" rows="2" placeholder="Ej.: me avisó por teléfono el 12/11"></textarea></label>
+      <p class="error-form" id="errorPorEllos" role="alert"></p>
+      <div class="fila-botones dos">
+        <button class="btn btn-oro" type="submit" id="btnGuardarPorEllos">Guardar</button>
+        <button class="btn" type="button" id="btnCancelarPorEllos">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Lista de confirmados para Silvia: vista previa de las imágenes -->
+  <div class="modal oculto" id="modalSilvia" role="dialog" aria-modal="true" aria-labelledby="tituloSilvia">
+    <div class="tarjeta modal-caja">
+      <h3 class="titulo" id="tituloSilvia">🖼 Imagen para Silvia</h3>
+      <div class="silvia-previas" id="silviaPrevias"></div>
+      <div class="fila-botones dos">
+        <button class="btn btn-oro" type="button" id="btnCompartirSilvia">📲 Compartir</button>
+        <button class="btn" type="button" id="btnBajarSilvia">⬇ Descargar</button>
+      </div>
+      <button class="btn btn-bloque" type="button" id="btnCerrarSilvia" style="margin-top:10px">Cerrar</button>
+    </div>
+  </div>
+
   <!-- Lote de fotos: mensaje con "Deshacer" (10 s) -->
   <div class="deshacer oculto" id="deshacer" role="status">
     <span id="deshacerTxt"></span>
@@ -405,6 +482,7 @@
   <script src="../config.js"></script>
   <script src="../js/comun.js"></script>
   <script src="../js/datos.js"></script>
+  <script src="../js/lista-silvia.js"></script>
   <script src="../js/panel.js"></script>
 </body>
 </html>

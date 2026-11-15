@@ -138,6 +138,8 @@
   document.addEventListener('click', e => { if (!e.target.closest('.menu-sup')) menu(false); });
 
   async function cargarTodo() {
+    // fecha y plazo de la base: los usan el cierre de confirmaciones y el texto del recordatorio
+    try { await Promise.race([S60.cargarEvento(), new Promise(r => setTimeout(r, 8000))]); } catch (e) { /* queda el respaldo de config.js */ }
     await Promise.all([cargarGrupos(), cargarRsvps(), cargarPreguntas(), cargarEstados(), cargarVideos()]);
   }
 
@@ -147,31 +149,126 @@
     pintarGrupos();
   }
   function rsvpDe(g) { return rsvps.find(r => r.grupo && r.grupo.slug === g.slug); }
+
+  // Estado de envío de cada familia → qué botón principal mostrar
+  //  'respondio' (Sí/No) · 'cerrado' (pasó el plazo sin Sí/No) · 'sinenviar' · 'pendiente' (enviada, sin respuesta o "no sabe")
+  const cerrado = () => !S60.rsvpAbierto();
+  const fueEnviada = g => !!(g.enviada_en || g.recordatorio || rsvpDe(g));
+  function estadoEnvio(g) {
+    const r = rsvpDe(g);
+    if (r && (r.asiste === 'si' || r.asiste === 'no')) return 'respondio';
+    if (cerrado()) return 'cerrado';
+    return fueEnviada(g) ? 'pendiente' : 'sinenviar';
+  }
+  const textoInvitacion = g => C.mensajeWhatsApp.replace('{nombres}', g.nombres).replace('{link}', linkGrupo(g));
+  function textoCierre() {
+    const f = new Date(C.fechaLimiteRsvp), Z = { timeZone: 'America/Argentina/Buenos_Aires' };
+    const dia = f.toLocaleDateString('es-AR', Object.assign({ weekday: 'short' }, Z)).replace('.', '');
+    const fecha = `${dia} ${f.toLocaleDateString('es-AR', Object.assign({ day: '2-digit', month: '2-digit' }, Z))}`;
+    if (cerrado()) return `Cierre: ${fecha} · 🔒 cerrado`;
+    const diaAR = t => Math.floor((t - 3 * 3600e3) / 864e5);   // días de calendario en hora argentina
+    const dias = diaAR(f.getTime()) - diaAR(Date.now());
+    return `Cierre: ${fecha} (${dias <= 0 ? 'cierra hoy' : dias === 1 ? 'falta 1 día' : 'faltan ' + dias + ' días'})`;
+  }
+  let filtroGrupos = 'todos';
+  const pasaFiltroGrupo = g => {
+    const r = rsvpDe(g), e = estadoEnvio(g);
+    return filtroGrupos === 'todos' || (filtroGrupos === 'sinenviar' && e === 'sinenviar') ||
+      (filtroGrupos === 'pendientes' && (e === 'pendiente' || e === 'cerrado')) ||
+      (filtroGrupos === 'vienen' && r && r.asiste === 'si') || (filtroGrupos === 'novan' && r && r.asiste === 'no');
+  };
   function pintarGrupos() {
     const cupoTotal = grupos.reduce((a, g) => a + g.cupo, 0);
     $('#resumenInvitados').textContent = `${grupos.length} ${grupos.length === 1 ? 'familia' : 'familias'} · ${cupoTotal} lugares`;
+    // Resumen: Enviadas · Confirmados (personas) · No van · Pendientes · Cierre
+    const est = grupos.map(g => ({ g, r: rsvpDe(g), e: estadoEnvio(g) }));
+    const vienen = est.filter(x => x.r && x.r.asiste === 'si'), noVan = est.filter(x => x.r && x.r.asiste === 'no');
+    const cuenta = { todos: grupos.length, sinenviar: est.filter(x => x.e === 'sinenviar').length, pendientes: est.filter(x => x.e === 'pendiente' || x.e === 'cerrado').length, vienen: vienen.length, novan: noVan.length };
+    $('#envioResumen').innerHTML = grupos.length ? `Enviadas <b>${grupos.filter(fueEnviada).length}</b> · Confirmados <b>${vienen.length}</b> (${vienen.reduce((a, x) => a + x.r.cantidad, 0)} personas) · No van <b>${noVan.length}</b> · Pendientes <b>${cuenta.pendientes}</b> · ${esc(textoCierre())}` : '';
+    $('#selloCerrado').classList.toggle('oculto', !cerrado() || !grupos.length);
+    const etiquetas = { todos: 'Todos', sinenviar: 'Sin enviar', pendientes: 'Pendientes', vienen: 'Vienen', novan: 'No van' };
+    $$('#filtrosGrupos button').forEach(b => { const f = b.dataset.f; b.textContent = `${etiquetas[f]} (${cuenta[f]})`; b.classList.toggle('activo', f === filtroGrupos); });
+    $('#btnMarcarTodasEnviadas').classList.toggle('oculto', !grupos.some(g => g.telefono && !fueEnviada(g)) || cerrado());
     if (!grupos.length) { $('#listaGrupos').innerHTML = '<p class="vacio-tabla">Todavía no hay familias. Tocá «+ Nueva familia» o importá un CSV.</p>'; return; }
-    // Una tarjeta por familia: nombres, integrantes, cupo, estado y botones grandes
-    $('#listaGrupos').innerHTML = grupos.map(g => {
-      const r = rsvpDe(g);
-      const estado = r ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>` : '<span class="pill sin">Sin respuesta</span>';
+    const lista = grupos.filter(pasaFiltroGrupo);
+    if (!lista.length) { $('#listaGrupos').innerHTML = '<p class="vacio-tabla">No hay familias en este grupo.</p>'; return; }
+    // Una tarjeta por familia: nombres, integrantes, estado y UN botón principal que cambia solo
+    $('#listaGrupos').innerHTML = lista.map(g => {
+      const r = rsvpDe(g), e = estadoEnvio(g);
       const integ = listaIntegrantes(g.integrantes);
-      return `<article class="familia" data-id="${g.id}">
-        <div class="familia-cab"><h4>${esc(g.nombres)}</h4>${estado}</div>
-        ${integ.length ? `<p class="integ">👥 ${esc(integ.join(', '))}</p>` : ''}
-        <p class="meta">Cupo ${g.cupo}${g.telefono ? ' · 📞 ' + esc(g.telefono) : ''}<br><code>?i=${esc(g.slug)}</code></p>
+      const pill = r && e === 'respondio' ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>`
+        : e === 'cerrado' ? `<span class="pill sin">${r ? 'No sabía al cierre' : 'Sin respuesta al cierre'}</span>`
+        : r ? `<span class="pill nose">Todavía no sabe</span>`
+        : e === 'sinenviar' ? '<span class="pill sin">Sin enviar</span>' : '<span class="pill sin">Sin respuesta</span>';
+      let principal = '', lineas = '';
+      if (e === 'respondio') {
+        lineas = r.asiste === 'si'
+          ? `<p class="estado-resp si">✅ Vienen ${r.cantidad}${r.nombres_asistentes ? ': ' + esc(r.nombres_asistentes) : ''}</p>`
+          : '<p class="estado-resp no">✖ No van</p>';
+        if (r.origen === 'panel') lineas += `<p class="meta-envio">✍ Cargado por ${esc(r.cargado_por || 'el panel')}</p>`;
+      } else if (e === 'sinenviar') {
+        principal = `<a class="btn btn-oro btn-principal" data-enviar="${g.id}" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(textoInvitacion(g), g.telefono))}">📤 Enviar invitación</a>
+          <button class="btn btn-chico btn-marcar" data-accion="marcar" type="button">Ya la mandé: marcar como enviada</button>`;
+      } else if (e === 'pendiente') {
+        principal = `<a class="btn btn-oro btn-principal" data-recordar="${g.id}" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(textoRecordatorio(g), g.telefono))}">🔔 ${g.recordatorio ? 'Enviar otro recordatorio' : 'Enviar recordatorio'}</a>`;
+      }
+      if (e !== 'respondio' && e !== 'sinenviar') {
+        if (g.enviada_en) lineas += `<p class="meta-envio">📤 Invitación enviada · ${S60.formatoFechaHora(g.enviada_en)}</p>`;
+        if (g.recordatorio) lineas += `<p class="meta-envio">🔔 Último recordatorio · ${S60.formatoFechaHora(g.recordatorio)}</p>`;
+      }
+      return `<article class="familia envio-${e}" data-id="${g.id}">
+        <div class="familia-cab"><h4>${esc(g.nombres)}</h4>${pill}</div>
+        ${integ.length && e !== 'respondio' ? `<p class="integ">👥 ${esc(integ.join(', '))}</p>` : ''}
+        ${lineas}
+        <p class="meta">Cupo ${g.cupo}${g.telefono ? ' · 📞 ' + esc(g.telefono) : ' · sin teléfono'} · <code>?i=${esc(g.slug)}</code></p>
+        ${principal ? `<div class="envio-principal">${principal}</div>` : ''}
         <div class="familia-botones">
-          <a class="btn btn-oro btn-wa" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(C.mensajeWhatsApp.replace('{nombres}', g.nombres).replace('{link}', linkGrupo(g)), g.telefono))}">💬 Enviar por WhatsApp</a>
-          <button class="btn" data-accion="copiar" type="button">🔗 Copiar link</button>
-          <button class="btn" data-accion="editar" type="button">✏️ Editar</button>
-          <button class="btn btn-peligro" data-accion="borrar" type="button" aria-label="Borrar ${esc(g.nombres)}">🗑 Borrar</button>
+          <button class="btn btn-por-ellos" data-accion="porellos" type="button">✍ ${r ? 'Editar respuesta' : 'Confirmar por ellos'}</button>
+          <button class="btn" data-accion="copiar" type="button">🔗 Link</button>
+          <button class="btn" data-accion="editar" type="button" aria-label="Editar familia ${esc(g.nombres)}">✏️ Familia</button>
+          <button class="btn btn-peligro" data-accion="borrar" type="button" aria-label="Borrar ${esc(g.nombres)}">🗑</button>
         </div></article>`;
     }).join('');
   }
+  $('#filtrosGrupos').addEventListener('click', e => {
+    const b = e.target.closest('button[data-f]'); if (!b) return;
+    filtroGrupos = b.dataset.f; pintarGrupos();
+  });
+  // Abrir WhatsApp (lo hace el link solo) y dejar anotado el envío
+  async function anotarEnvio(id, tipo) {
+    const g = grupos.find(x => x.id === id);
+    if (!g) return;
+    try {
+      if (tipo === 'invitacion') { if (!g.enviada_en) g.enviada_en = await A.marcarEnviadas([g.id]); toast('Invitación anotada como enviada ✔'); }
+      else { g.recordatorio = await A.marcarRecordatorio(g.id); toast('Recordatorio anotado ✔'); }
+    } catch (ex) { toast(ex.message, 'error', 7000); }
+    pintarGrupos(); pintarRsvps();
+  }
+  $('#listaGrupos').addEventListener('click', e => {
+    const a = e.target.closest('a[data-enviar], a[data-recordar]');
+    if (a) anotarEnvio(a.dataset.enviar || a.dataset.recordar, a.dataset.enviar ? 'invitacion' : 'recordatorio');
+  });
+  $('#btnMarcarTodasEnviadas').addEventListener('click', async () => {
+    menu(false);
+    const faltan = grupos.filter(g => g.telefono && !fueEnviada(g));
+    if (!faltan.length) { toast('No hay familias con teléfono sin marcar'); return; }
+    if (!confirm(`¿Marcar ${faltan.length} ${faltan.length === 1 ? 'familia' : 'familias'} con teléfono como «invitación enviada»?\n\nSolo cambia la anotación del panel (no manda nada).`)) return;
+    try {
+      const ahora = await A.marcarEnviadas(faltan.map(g => g.id));
+      faltan.forEach(g => { g.enviada_en = ahora; });
+      toast(`Marcadas ${faltan.length} como enviadas ✔`);
+    } catch (ex) { toast(ex.message, 'error', 7000); }
+    pintarGrupos();
+  });
   $('#listaGrupos').addEventListener('click', async e => {
     const b = e.target.closest('button[data-accion]');
     if (!b) return;
     const g = grupos.find(x => x.id === b.closest('.familia').dataset.id);
+    if (b.dataset.accion === 'porellos') { abrirPorEllos(g); return; }
+    if (b.dataset.accion === 'marcar') {
+      await conBoton(b, async () => { g.enviada_en = await A.marcarEnviadas([g.id]); toast('Marcada como enviada ✔'); pintarGrupos(); pintarRsvps(); });
+      return;
+    }
     if (b.dataset.accion === 'copiar') {
       try { await navigator.clipboard.writeText(linkGrupo(g)); toast('Link copiado ✔'); } catch (ex) { prompt('Copiá el link:', linkGrupo(g)); }
     } else if (b.dataset.accion === 'editar') {
@@ -298,6 +395,23 @@
     try { rsvps = await A.rsvps(); } catch (e) { toast(e.message, 'error'); }
     pintarRsvps(); pintarPlaylist(); pintarMensajes(); pintarGrupos();
   }
+  // Una fila por familia (con o sin respuesta) + las del link general
+  let filtroRsvp = 'todas';
+  function filasConfirmados() {
+    const conGrupo = grupos.map(g => ({ g, r: rsvpDe(g) || null }));
+    const generales = rsvps.filter(r => !r.grupo).map(r => ({ g: null, r }));
+    return conGrupo.concat(generales);
+  }
+  const estadoFila = f => f.r ? f.r.asiste : 'sin';
+  const origenTexto = r => r.origen === 'panel'
+    ? `✍ Confirmado por ${r.cargado_por || 'el panel'} · ${S60.formatoFechaHora(r.cargado_en || r.actualizado)}`
+    : `Confirmó el invitado · ${S60.formatoFechaHora(r.actualizado)}${r.cargado_por ? ` (antes lo había cargado ${r.cargado_por})` : ''}`;
+  const pendientesRsvp = () => filasConfirmados().filter(f => f.g && (estadoFila(f) === 'sin' || estadoFila(f) === 'nose'));
+  function textoRecordatorio(g) {
+    const minus = s => s.charAt(0).toLowerCase() + s.slice(1);
+    return (C.mensajeRecordatorio || '').replace('{nombres}', g.nombres).replace('{fecha}', minus(C.fechaTexto || ''))
+      .replace('{limite}', C.fechaLimiteTexto || '').replace('{link}', linkGrupo(g));
+  }
   function pintarRsvps() {
     const si = rsvps.filter(r => r.asiste === 'si'), no = rsvps.filter(r => r.asiste === 'no'), nose = rsvps.filter(r => r.asiste === 'nose');
     const sinResp = grupos.filter(g => !rsvpDe(g)).length;
@@ -305,16 +419,62 @@
     const lugares = grupos.reduce((a, g) => a + g.cupo, 0);
     const n = (num, txt) => `<div class="num"><b>${num}</b><span>${txt}</span></div>`;
     $('#numeros').innerHTML = n(personas, 'personas confirmadas') + n(si.length, 'grupos que vienen') + n(no.length, 'no van') + n(nose.length, 'todavía no saben') + n(sinResp, 'grupos sin respuesta') + n(lugares, 'lugares reservados');
-    if (!rsvps.length) { $('#listaRsvp').innerHTML = '<p class="vacio-tabla">Todavía no hay respuestas.</p>'; return; }
-    $('#listaRsvp').innerHTML = rsvps.map(r => `<article class="familia respuesta">
-        <div class="familia-cab"><h4>${esc(nombreRsvp(r))}${r.grupo ? '' : ' <small class="suave">(link general)</small>'}</h4>
-          <span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span></div>
-        ${r.asiste === 'si' && r.nombres_asistentes ? `<p class="integ">👥 ${esc(r.nombres_asistentes)}</p>` : ''}
-        <p class="meta">Actualizado ${S60.formatoFechaHora(r.actualizado)}</p></article>`).join('');
+    const todas = filasConfirmados();
+    const cuenta = e => todas.filter(f => estadoFila(f) === e).length;
+    const etiquetas = { todas: 'Todas', sin: 'Sin respuesta', nose: 'Todavía no sabe', si: 'Vienen', no: 'No van' };
+    $$('#filtrosRsvp button').forEach(b => { const f = b.dataset.f; b.textContent = f === 'todas' ? etiquetas[f] : `${etiquetas[f]} (${cuenta(f)})`; b.classList.toggle('activo', f === filtroRsvp); });
+    const pend = pendientesRsvp().filter(f => filtroRsvp === 'todas' || estadoFila(f) === filtroRsvp);
+    $('#pendHerr').classList.toggle('oculto', !pend.length || !['todas', 'sin', 'nose'].includes(filtroRsvp));
+    // primero los que faltan; dentro de cada estado, lo más reciente arriba
+    const orden = { sin: 0, nose: 1, si: 2, no: 3 };
+    const lista = todas.filter(f => filtroRsvp === 'todas' || estadoFila(f) === filtroRsvp)
+      .sort((a, b) => orden[estadoFila(a)] - orden[estadoFila(b)] || String((b.r || {}).actualizado || '').localeCompare(String((a.r || {}).actualizado || '')) || nombreFila(a).localeCompare(nombreFila(b)));
+    if (!lista.length) { $('#listaRsvp').innerHTML = `<p class="vacio-tabla">${filtroRsvp === 'todas' ? 'Todavía no hay familias.' : 'No hay nadie en este grupo.'}</p>`; return; }
+    $('#listaRsvp').innerHTML = lista.map(f => {
+      const { g, r } = f, e = estadoFila(f);
+      const pill = r ? `<span class="pill ${r.asiste}">${textoAsiste[r.asiste]}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</span>` : `<span class="pill sin">${cerrado() ? 'Sin respuesta al cierre' : 'Sin respuesta'}</span>`;
+      const integ = g ? listaIntegrantes(g.integrantes) : [];
+      const pide = g && (e === 'sin' || e === 'nose') && !cerrado();
+      return `<article class="familia respuesta" data-grupo="${g ? g.id : ''}">
+        <div class="familia-cab"><h4>${esc(nombreFila(f))}${g ? '' : ' <small class="suave">(link general)</small>'}</h4>${pill}</div>
+        ${r && r.asiste === 'si' && r.nombres_asistentes ? `<p class="integ">👥 ${esc(r.nombres_asistentes)}</p>` : (!r && integ.length ? `<p class="integ">👥 ${esc(integ.join(', '))}</p>` : '')}
+        ${r ? `<p class="meta origen ${r.origen === 'panel' ? 'por-panel' : ''}">${esc(origenTexto(r))}</p>` : `<p class="meta">Cupo ${g.cupo}${g.telefono ? ' · 📞 ' + esc(g.telefono) : ' · sin teléfono'}</p>`}
+        ${r && r.nota_interna ? `<p class="nota-interna">🔒 ${esc(r.nota_interna)}</p>` : ''}
+        ${g && g.recordatorio && pide ? `<p class="meta recordado">🔔 Último recordatorio ${S60.formatoFechaHora(g.recordatorio)}</p>` : ''}
+        ${g ? `<div class="resp-botones">
+          ${pide ? `<a class="btn btn-oro" data-recordar="${g.id}" target="_blank" rel="noopener" href="${esc(S60.urlWhatsApp(textoRecordatorio(g), g.telefono))}">🔔 ${g.recordatorio ? 'Enviar otro recordatorio' : 'Enviar recordatorio'}</a>` : ''}
+          <button class="btn" type="button" data-porellos="${g.id}">✍ ${r ? 'Cambiar su respuesta' : 'Confirmar por ellos'}</button>
+        </div>` : ''}
+      </article>`;
+    }).join('');
   }
   const nombreRsvp = r => r.grupo ? r.grupo.nombres : (r.nombre_contacto || 'Sin nombre');
+  const nombreFila = f => f.g ? f.g.nombres : nombreRsvp(f.r);
+  $('#filtrosRsvp').addEventListener('click', e => {
+    const b = e.target.closest('button[data-f]'); if (!b) return;
+    filtroRsvp = b.dataset.f;
+    pintarRsvps();
+  });
+  $('#listaRsvp').addEventListener('click', async e => {
+    const pe = e.target.closest('[data-porellos]');
+    if (pe) { abrirPorEllos(grupos.find(g => g.id === pe.dataset.porellos)); return; }
+    const rec = e.target.closest('[data-recordar]');
+    if (rec) {   // el link abre WhatsApp solo; acá solo queda anotado que se mandó
+      const g = grupos.find(x => x.id === rec.dataset.recordar);
+      try { g.recordatorio = await A.marcarRecordatorio(g.id); toast('Recordatorio anotado ✔'); }
+      catch (ex) { toast(ex.message, 'error', 7000); }
+      pintarRsvps(); pintarGrupos();
+    }
+  });
+  $('#btnCopiarPendientes').addEventListener('click', async () => {
+    const pend = pendientesRsvp().filter(f => filtroRsvp === 'todas' || estadoFila(f) === filtroRsvp);
+    const lineas = pend.map(({ g, r }) => `• ${g.nombres}${r ? ' (todavía no sabe)' : ''} — ${g.telefono || 'sin teléfono'} — ${linkGrupo(g)}`);
+    const texto = `Pendientes de confirmar (${pend.length}) · plazo: ${C.fechaLimiteTexto}\n` + lineas.join('\n');
+    try { await navigator.clipboard.writeText(texto); toast(`Lista copiada ✔ ${pend.length} ${pend.length === 1 ? 'familia' : 'familias'}`); }
+    catch (ex) { prompt('Copiá la lista:', texto); }
+  });
   $('#btnExportarRsvp').addEventListener('click', () => {
-    const filas = rsvps.map(r => r).concat(grupos.filter(g => !rsvpDe(g)).map(g => ({ grupo: g, asiste: null })));
+    const filas = filasConfirmados().map(({ g, r }) => Object.assign({ asiste: null }, r || {}, { grupo: g || (r && r.grupo) || null, _g: g }));
     S60.descargarArchivo(csv(filas, [
       { titulo: 'Grupo / nombre', valor: r => nombreRsvp(r) },
       { titulo: 'Cupo', valor: r => r.grupo ? r.grupo.cupo : '' },
@@ -322,10 +482,117 @@
       { titulo: 'Cantidad', valor: r => r.asiste === 'si' ? r.cantidad : 0 },
       { titulo: 'Quiénes vienen', valor: r => r.asiste === 'si' ? (r.nombres_asistentes || '') : '' },
       { titulo: 'Integrantes del grupo', valor: r => r.grupo ? listaIntegrantes(r.grupo.integrantes).join(', ') : '' },
+      { titulo: 'Quién respondió', valor: r => !r.asiste ? '' : r.origen === 'panel' ? `Confirmado por ${r.cargado_por || 'el panel'} (${S60.formatoFechaHora(r.cargado_en || r.actualizado)})` : 'Confirmó el invitado' },
+      { titulo: 'Nota interna', valor: r => r.nota_interna || '' },
+      { titulo: 'Recordatorio enviado', valor: r => r._g && r._g.recordatorio ? S60.formatoFechaHora(r._g.recordatorio) : '' },
+      { titulo: 'Teléfono', valor: r => r.grupo ? (r.grupo.telefono || '') : '' },
       { titulo: 'Link', valor: r => r.grupo ? linkGrupo(r.grupo) : '' },
       { titulo: 'Actualizado', valor: r => r.actualizado ? S60.formatoFechaHora(r.actualizado) : '' }
     ]), `confirmaciones-silvia60-${hoy()}.csv`);
   });
+
+  /* ---------- Confirmar por ellos (para quien no sabe o no puede) ---------- */
+  let porEllos = null;
+  const unirNombres = l => l.length <= 1 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' y ' + l[l.length - 1];
+  function abrirPorEllos(g) {
+    if (!g) return;
+    porEllos = g;
+    const f = $('#formPorEllos'), r = rsvpDe(g), integ = listaIntegrantes(g.integrantes);
+    f.reset();
+    $('#errorPorEllos').textContent = '';
+    $('#tituloPorEllos').textContent = `✍ ${r ? 'Cambiar la respuesta de' : 'Confirmar por'} ${g.nombres}`;
+    $('#porEllosAntes').innerHTML = r ? `Ya respondieron: <b>${esc(textoAsiste[r.asiste])}${r.asiste === 'si' ? ' · ' + r.cantidad : ''}</b> — ${esc(origenTexto(r))}. Si guardás, se modifica esa misma respuesta (no se duplica).`
+      : `Cupo ${g.cupo}. Queda registrado como «Confirmado por ${esc(C.nombreAdmin || 'el panel')}». Si después la familia abre su link, ve esta respuesta y la puede cambiar.`;
+    if (r) { const a = f.querySelector(`[name=asiste][value="${r.asiste}"]`); if (a) a.checked = true; }
+    const vienen = r && r.asiste === 'si' ? String(r.nombres_asistentes || '').split(/\s*,\s*|\s+y\s+/).map(s => s.trim().toLowerCase()) : null;
+    $('#porEllosIntegrantes').classList.toggle('oculto', !integ.length);
+    $('#porEllosCantidad').classList.toggle('oculto', !!integ.length);
+    $('#porEllosLista').innerHTML = integ.map(n => `<label class="integ-check"><input type="checkbox" value="${esc(n)}" ${!vienen || vienen.includes(n.toLowerCase()) ? 'checked' : ''}><span>${esc(n)}</span></label>`).join('');
+    f.cantidad.max = g.cupo;
+    f.cantidad.value = r && r.asiste === 'si' ? r.cantidad : g.cupo;
+    f.nombres.value = r && r.asiste === 'si' && !integ.length ? (r.nombres_asistentes || '') : '';
+    ((r && r.canciones) || []).slice(0, 2).forEach((c, i) => { f['tema' + i].value = c.tema || ''; f['artista' + i].value = c.artista || ''; });
+    f.nota.value = (r && r.nota_interna) || '';
+    pintarPorEllos();
+    $('#modalPorEllos').classList.remove('oculto');
+  }
+  function pintarPorEllos() {
+    const f = $('#formPorEllos');
+    const asiste = (f.querySelector('[name=asiste]:checked') || {}).value;
+    $('#porEllosSi').classList.toggle('oculto', asiste !== 'si');
+    const total = $$('#porEllosLista input').length, n = $$('#porEllosLista input:checked').length;
+    $('#porEllosCuenta').textContent = total ? (n ? `Vienen ${n} de ${total}` : 'Nadie tildado: se guarda como «No van»') : '';
+  }
+  $('#formPorEllos').addEventListener('change', pintarPorEllos);
+  $('#btnCancelarPorEllos').addEventListener('click', () => $('#modalPorEllos').classList.add('oculto'));
+  $('#formPorEllos').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, g = porEllos;
+    let asiste = (f.querySelector('[name=asiste]:checked') || {}).value;
+    if (!asiste) { $('#errorPorEllos').textContent = 'Elegí si vienen, si no van o si todavía no saben.'; return; }
+    let cantidad = 0, nombres = '';
+    if (asiste === 'si') {
+      if (listaIntegrantes(g.integrantes).length) {
+        const t = $$('#porEllosLista input:checked').map(i => i.value);
+        if (!t.length) asiste = 'no';
+        cantidad = t.length; nombres = unirNombres(t);
+      } else {
+        cantidad = parseInt(f.cantidad.value, 10);
+        if (!(cantidad >= 1 && cantidad <= g.cupo)) { $('#errorPorEllos').textContent = `Poné cuántos vienen (de 1 a ${g.cupo}).`; return; }
+        nombres = f.nombres.value.trim();
+      }
+    }
+    const canciones = asiste === 'si' ? [0, 1].map(i => ({ tema: f['tema' + i].value.trim(), artista: f['artista' + i].value.trim() })).filter(c => c.tema) : [];
+    await conBoton($('#btnGuardarPorEllos'), async () => {
+      try {
+        await A.confirmarPorEllos({ grupo_id: g.id, asiste, cantidad: asiste === 'si' ? cantidad : 0, nombres_asistentes: asiste === 'si' ? nombres : '',
+          canciones, nota_interna: f.nota.value.trim(), por: C.nombreAdmin || '' });
+      } catch (ex) { $('#errorPorEllos').textContent = ex.message; throw ex; }
+      $('#modalPorEllos').classList.add('oculto');
+      toast(`Guardado ✔ ${g.nombres}: ${textoAsiste[asiste]}${asiste === 'si' ? ' · ' + cantidad : ''}`);
+      await cargarRsvps();
+    });
+  });
+
+  /* ---------- Lista de confirmados para Silvia (imagen y PDF) ---------- */
+  function datosParaSilvia() {
+    const todas = filasConfirmados();
+    const porNombre = (a, b) => nombreFila(a).localeCompare(nombreFila(b), 'es');
+    const vienen = todas.filter(f => estadoFila(f) === 'si').sort(porNombre).map(f => ({
+      nombre: nombreFila(f), cantidad: f.r.cantidad,
+      quienes: f.r.nombres_asistentes || (f.g && listaIntegrantes(f.g.integrantes).length === f.r.cantidad ? unirNombres(listaIntegrantes(f.g.integrantes)) : '')
+    }));
+    return {
+      fecha: new Date(), homenajeada: C.homenajeada, edad: C.edad,
+      personas: vienen.reduce((a, v) => a + v.cantidad, 0), vienen,
+      noVan: todas.filter(f => estadoFila(f) === 'no').sort(porNombre).map(nombreFila),
+      sinRespuesta: todas.filter(f => estadoFila(f) === 'sin' || estadoFila(f) === 'nose').sort(porNombre).map(f => nombreFila(f) + (estadoFila(f) === 'nose' ? ' (no sabe)' : ''))
+    };
+  }
+  let imagenesSilvia = [];
+  $('#btnImagenSilvia').addEventListener('click', e => conBoton(e.currentTarget, async () => {
+    $('#listaSilviaEstado').textContent = 'Armando la imagen…';
+    await cargarRsvps();
+    imagenesSilvia = await ListaSilvia.imagenes(datosParaSilvia());
+    $('#listaSilviaEstado').textContent = '';
+    $('#silviaPrevias').innerHTML = imagenesSilvia.map((im, i) => `<img src="${im.url}" alt="Lista de confirmados ${i + 1} de ${imagenesSilvia.length}">`).join('');
+    $('#tituloSilvia').textContent = imagenesSilvia.length > 1 ? `🖼 Imagen para Silvia (${imagenesSilvia.length} partes)` : '🖼 Imagen para Silvia';
+    $('#btnCompartirSilvia').classList.toggle('oculto', !ListaSilvia.puedeCompartir(imagenesSilvia));
+    $('#modalSilvia').classList.remove('oculto');
+  }).finally(() => { $('#listaSilviaEstado').textContent = ''; }));
+  $('#btnCompartirSilvia').addEventListener('click', async () => {
+    try { await ListaSilvia.compartir(imagenesSilvia, `Confirmados para los ${C.edad} de ${C.homenajeada}`); }
+    catch (ex) { if (ex.name !== 'AbortError') toast('No se pudo compartir: usá «Descargar»', 'error'); }
+  });
+  $('#btnBajarSilvia').addEventListener('click', () => imagenesSilvia.forEach((im, i) => setTimeout(() => S60.descargarArchivo(im.blob, im.nombre), i * 700)));
+  $('#btnCerrarSilvia').addEventListener('click', () => $('#modalSilvia').classList.add('oculto'));
+  $('#btnPdfSilvia').addEventListener('click', e => conBoton(e.currentTarget, async () => {
+    $('#listaSilviaEstado').textContent = 'Armando el PDF…';
+    await cargarRsvps();
+    const r = await ListaSilvia.pdf(datosParaSilvia());
+    S60.descargarArchivo(r.blob, r.nombre);
+    toast(`PDF listo ✔ (${r.hojas} ${r.hojas === 1 ? 'hoja' : 'hojas'})`);
+  }).finally(() => { $('#listaSilviaEstado').textContent = ''; }));
 
   /* ====================== PLAYLIST ====================== */
   function playlist() {

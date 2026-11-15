@@ -68,6 +68,13 @@
     err.faltaSql = /actualizacion-4/.test(err.message);
     return err;
   }
+  function errorSql6(e) {
+    const m = (e && e.message) || String(e);
+    const err = new Error(/does not exist|schema cache|could not find|rsvp_por_admin|recordatorio|enviada_en/i.test(m) && !/No autorizado|máximo|Elegí|Familia/.test(m)
+      ? 'Falta correr supabase/actualizacion-6.sql en Supabase (SQL Editor → Run)' : m.replace(/^.*?: /, ''));
+    err.faltaSql = /actualizacion-6/.test(err.message);
+    return err;
+  }
 
   /* ======================= SUPABASE ======================= */
   function backendSupabase() {
@@ -219,9 +226,31 @@
         },
         async rsvps() {
           const s = await db();
-          const { data, error } = await s.from('rsvps').select('*, grupo:grupos(slug,nombres,cupo)').order('actualizado', { ascending: false });
+          const { data, error } = await s.from('rsvps').select('*, grupo:grupos(id,slug,nombres,cupo,integrantes,telefono)').order('actualizado', { ascending: false });
           if (error) throw traducirError(error);
           return data;
+        },
+        // "Confirmar por ellos": la misma confirmación de la familia (si ya respondieron, se modifica)
+        async confirmarPorEllos(p) {
+          const s = await db();
+          const { data, error } = await s.rpc('rsvp_por_admin', { p });
+          if (error) throw errorSql6(error);
+          return data;
+        },
+        async marcarRecordatorio(grupoId) {
+          const s = await db();
+          const ahora = new Date().toISOString();
+          const { error } = await s.from('grupos').update({ recordatorio: ahora }).eq('id', grupoId);
+          if (error) throw errorSql6(error);
+          return ahora;
+        },
+        // Invitación enviada: uno o varios grupos (solo los que todavía no estaban marcados)
+        async marcarEnviadas(ids) {
+          const s = await db();
+          const ahora = new Date().toISOString();
+          const { error } = await s.from('grupos').update({ enviada_en: ahora }).in('id', ids).is('enviada_en', null);
+          if (error) throw errorSql6(error);
+          return ahora;
         },
         async fotos() {
           const s = await db();
@@ -577,6 +606,7 @@
             canciones: (datos.canciones || []).slice(0, 2).map(c => ({ tema: limpiar(c.tema, 100), artista: limpiar(c.artista, 100) })).filter(c => c.tema),
             mensaje: limpiar(datos.mensaje, 600),
             mostrar_mensaje: datos.mostrar_mensaje !== false,
+            origen: 'invitado',
             actualizado: new Date().toISOString()
           };
           let r = g ? d.rsvps.find(x => x.grupo_id === g.id) : (token ? d.rsvps.find(x => x.token === token && !x.grupo_id) : null);
@@ -727,10 +757,41 @@
           });
         },
         async borrarGrupo(id) { exigirAdmin(); cambiar(d => { d.grupos = d.grupos.filter(g => g.id !== id); d.rsvps = d.rsvps.filter(r => r.grupo_id !== id); }); },
+        // Igual que supabase rsvp_por_admin (actualizacion-6.sql)
+        async confirmarPorEllos(p) {
+          exigirAdmin();
+          await espera(200);
+          return cambiar(d => {
+            const g = d.grupos.find(x => x.id === p.grupo_id) || err('Familia no encontrada');
+            const asiste = ['si', 'no', 'nose'].includes(p.asiste) ? p.asiste : err('Elegí si vienen o no');
+            const cantidad = asiste === 'si' ? Math.max(1, parseInt(p.cantidad, 10) || 1) : 0;
+            if (cantidad > g.cupo) err(`El máximo para esta familia es ${g.cupo}`);
+            const ahora = new Date().toISOString();
+            const fila = { asiste, cantidad, nombres_asistentes: asiste === 'si' ? limpiar(p.nombres_asistentes, 400) : null,
+              canciones: (p.canciones || []).slice(0, 2).map(c => ({ tema: limpiar(c.tema, 100), artista: limpiar(c.artista, 100) })).filter(c => c.tema),
+              nota_interna: limpiar(p.nota_interna, 500) || null, origen: 'panel', cargado_por: limpiar(p.por, 40) || 'el panel', cargado_en: ahora, actualizado: ahora };
+            let r = d.rsvps.find(x => x.grupo_id === g.id);
+            if (r) Object.assign(r, fila);
+            else { r = Object.assign({ id: crypto.randomUUID(), token: crypto.randomUUID(), grupo_id: g.id, nombre_contacto: null, menu: 'ninguno', mensaje: null, mostrar_mensaje: true, creado: ahora }, fila); d.rsvps.push(r); }
+            return { id: r.id, token: r.token };
+          });
+        },
+        async marcarRecordatorio(grupoId) {
+          exigirAdmin();
+          const ahora = new Date().toISOString();
+          cambiar(d => { const g = d.grupos.find(x => x.id === grupoId); if (g) g.recordatorio = ahora; });
+          return ahora;
+        },
+        async marcarEnviadas(ids) {
+          exigirAdmin();
+          const ahora = new Date().toISOString();
+          cambiar(d => d.grupos.forEach(g => { if (ids.includes(g.id) && !g.enviada_en) g.enviada_en = ahora; }));
+          return ahora;
+        },
         async rsvps() {
           exigirAdmin();
           const d = leer();
-          return d.rsvps.map(r => Object.assign({}, r, { grupo: (g => g ? { slug: g.slug, nombres: g.nombres, cupo: g.cupo } : null)(d.grupos.find(g => g.id === r.grupo_id)) }))
+          return d.rsvps.map(r => Object.assign({ origen: 'invitado' }, r, { grupo: (g => g ? { id: g.id, slug: g.slug, nombres: g.nombres, cupo: g.cupo, integrantes: g.integrantes || '', telefono: g.telefono || '' } : null)(d.grupos.find(g => g.id === r.grupo_id)) }))
             .sort((a, b) => b.actualizado.localeCompare(a.actualizado));
         },
         async fotos() {

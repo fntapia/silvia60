@@ -72,6 +72,20 @@ create table if not exists public.rsvps (
   creado timestamptz not null default now(),
   actualizado timestamptz not null default now()
 );
+-- Actualización 6: quién cargó la confirmación (el invitado o el admin desde el panel) y recordatorios
+alter table public.rsvps add column if not exists origen text not null default 'invitado';
+alter table public.rsvps add column if not exists cargado_por text;
+alter table public.rsvps add column if not exists cargado_en timestamptz;
+alter table public.rsvps add column if not exists nota_interna text;
+alter table public.grupos add column if not exists recordatorio timestamptz;
+alter table public.grupos add column if not exists enviada_en timestamptz;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rsvps_origen_ok' and conrelid = 'public.rsvps'::regclass) then
+    alter table public.rsvps add constraint rsvps_origen_ok check (origen in ('invitado', 'panel')
+      and char_length(coalesce(cargado_por, '')) <= 40 and char_length(coalesce(nota_interna, '')) <= 500);
+  end if;
+end $$;
 
 create table if not exists public.fotos (
   id uuid primary key,
@@ -88,6 +102,7 @@ create table if not exists public.fotos (
 );
 create index if not exists fotos_dispositivo_idx on public.fotos (dispositivo, creado);
 create index if not exists fotos_creado_idx on public.fotos (creado);
+create index if not exists fotos_estado_creado_idx on public.fotos (estado, creado);
 
 create table if not exists public.pantalla_estado (
   id int primary key default 1 check (id = 1),
@@ -152,6 +167,7 @@ create table if not exists public.trivia_respuestas (
   creado timestamptz not null default now(),
   primary key (jugador_id, pregunta_id)
 );
+create index if not exists trivia_respuestas_pregunta_idx on public.trivia_respuestas (pregunta_id, partida);
 
 -- ---------------------------------------------------------------------
 -- Seguridad (Row Level Security): por defecto nadie ve nada.
@@ -254,29 +270,65 @@ begin
           where coalesce(trim(c ->> 'tema'), '') <> '' limit 2) x;
 
   if g.id is not null then
-    insert into rsvps (grupo_id, nombre_contacto, asiste, cantidad, nombres_asistentes, menu, menu_detalle, canciones, mensaje, mostrar_mensaje)
+    insert into rsvps (grupo_id, nombre_contacto, asiste, cantidad, nombres_asistentes, menu, menu_detalle, canciones, mensaje, mostrar_mensaje, origen)
     values (g.id, left(p ->> 'nombre_contacto', 120), v_asiste, v_cant, left(p ->> 'nombres_asistentes', 400), v_menu, left(p ->> 'menu_detalle', 200),
-            v_canciones, left(p ->> 'mensaje', 600), coalesce((p ->> 'mostrar_mensaje')::boolean, true))
+            v_canciones, left(p ->> 'mensaje', 600), coalesce((p ->> 'mostrar_mensaje')::boolean, true), 'invitado')
     on conflict (grupo_id) do update set
       nombre_contacto = excluded.nombre_contacto, asiste = excluded.asiste, cantidad = excluded.cantidad,
       nombres_asistentes = excluded.nombres_asistentes, menu = excluded.menu, menu_detalle = excluded.menu_detalle,
-      canciones = excluded.canciones, mensaje = excluded.mensaje, mostrar_mensaje = excluded.mostrar_mensaje, actualizado = now()
+      canciones = excluded.canciones, mensaje = excluded.mensaje, mostrar_mensaje = excluded.mostrar_mensaje,
+      origen = 'invitado', actualizado = now()
     returning token into v_token;
   else
     update rsvps set nombre_contacto = left(p ->> 'nombre_contacto', 120), asiste = v_asiste, cantidad = v_cant,
       nombres_asistentes = left(p ->> 'nombres_asistentes', 400), menu = v_menu, menu_detalle = left(p ->> 'menu_detalle', 200),
-      canciones = v_canciones, mensaje = left(p ->> 'mensaje', 600), mostrar_mensaje = coalesce((p ->> 'mostrar_mensaje')::boolean, true), actualizado = now()
+      canciones = v_canciones, mensaje = left(p ->> 'mensaje', 600), mostrar_mensaje = coalesce((p ->> 'mostrar_mensaje')::boolean, true),
+      origen = 'invitado', actualizado = now()
     where grupo_id is null and token = nullif(p ->> 'token', '')::uuid
     returning token into v_token;
     if v_token is null then
-      insert into rsvps (grupo_id, nombre_contacto, asiste, cantidad, nombres_asistentes, menu, menu_detalle, canciones, mensaje, mostrar_mensaje)
+      insert into rsvps (grupo_id, nombre_contacto, asiste, cantidad, nombres_asistentes, menu, menu_detalle, canciones, mensaje, mostrar_mensaje, origen)
       values (null, left(p ->> 'nombre_contacto', 120), v_asiste, v_cant, left(p ->> 'nombres_asistentes', 400), v_menu, left(p ->> 'menu_detalle', 200),
-              v_canciones, left(p ->> 'mensaje', 600), coalesce((p ->> 'mostrar_mensaje')::boolean, true))
+              v_canciones, left(p ->> 'mensaje', 600), coalesce((p ->> 'mostrar_mensaje')::boolean, true), 'invitado')
       returning token into v_token;
     end if;
   end if;
   return json_build_object('token', v_token);
 end $$;
+
+-- "Confirmar por ellos" desde el panel (solo admin; sin fecha límite). Una sola confirmación por familia.
+create or replace function public.rsvp_por_admin(p jsonb) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  g grupos;
+  r rsvps;
+  v_asiste text := p ->> 'asiste';
+  v_cant int;
+  v_canciones jsonb;
+begin
+  if not es_admin() then raise exception 'No autorizado'; end if;
+  select * into g from grupos where id = nullif(p ->> 'grupo_id', '')::uuid;
+  if not found then raise exception 'Familia no encontrada'; end if;
+  if v_asiste is null or v_asiste not in ('si', 'no', 'nose') then raise exception 'Elegí si vienen o no'; end if;
+  v_cant := case when v_asiste = 'si' then greatest(1, coalesce(nullif(p ->> 'cantidad', '')::int, 1)) else 0 end;
+  if v_cant > g.cupo then raise exception 'El máximo para esta familia es %', g.cupo; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('tema', left(trim(c ->> 'tema'), 100), 'artista', left(trim(coalesce(c ->> 'artista', '')), 100))), '[]'::jsonb)
+    into v_canciones
+    from (select c from jsonb_array_elements(case when jsonb_typeof(p -> 'canciones') = 'array' then p -> 'canciones' else '[]'::jsonb end) c
+          where coalesce(trim(c ->> 'tema'), '') <> '' limit 2) x;
+  insert into rsvps (grupo_id, asiste, cantidad, nombres_asistentes, canciones, nota_interna, origen, cargado_por, cargado_en)
+  values (g.id, v_asiste, v_cant, case when v_asiste = 'si' then left(p ->> 'nombres_asistentes', 400) end, v_canciones,
+          nullif(left(trim(coalesce(p ->> 'nota_interna', '')), 500), ''), 'panel',
+          left(coalesce(nullif(trim(p ->> 'por'), ''), 'el panel'), 40), now())
+  on conflict (grupo_id) do update set
+    asiste = excluded.asiste, cantidad = excluded.cantidad, nombres_asistentes = excluded.nombres_asistentes,
+    canciones = excluded.canciones, nota_interna = excluded.nota_interna,
+    origen = 'panel', cargado_por = excluded.cargado_por, cargado_en = now(), actualizado = now()
+  returning * into r;
+  return json_build_object('id', r.id, 'token', r.token);
+end $$;
+revoke all on function public.rsvp_por_admin(jsonb) from public, anon;
+grant execute on function public.rsvp_por_admin(jsonb) to authenticated;
 
 create or replace function public.permite_original() returns boolean
 language sql stable security definer set search_path = public as $$

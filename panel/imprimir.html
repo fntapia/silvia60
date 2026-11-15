@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Itinerario para imprimir · Silvia 60</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../assets/icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root { --oro: #B8902F; --oro-claro: #E3C36A; --oro-osc: #8C6A1E; --tinta: #1d1a17; --suave: #6f655a; --crema: #FBF4E2; --linea: #EADFC4; --k: 1; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #e9e5dc; color: var(--tinta); font-family: Montserrat, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4 portrait; margin: 0; }
+
+    /* Barra de arriba (solo en pantalla) */
+    .barra { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; padding: 10px 16px; background: #1A1A1A; color: #f3ead2; font-size: 14px; }
+    .barra button { min-height: 46px; padding: 0 18px; border: 0; border-radius: 999px; font: 700 15px Montserrat, sans-serif; color: #1d1a17; background: linear-gradient(135deg, #C9A24A, #F5D97A 50%, #C9A24A); cursor: pointer; }
+    .barra label { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; cursor: pointer; }
+    .barra input { width: 20px; height: 20px; accent-color: #C9A24A; }
+    .barra a { color: #F5D97A; }
+    .aviso { max-width: 560px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 16px; text-align: center; line-height: 1.5; }
+
+    /* La hoja A4 */
+    .marco-hoja { padding: 16px 0 32px; overflow: hidden; }
+    @media screen { html, body { overflow-x: hidden; } }
+    .hoja { position: relative; width: 210mm; height: 297mm; margin: 0 auto; background: #fff; overflow: hidden; box-shadow: 0 6px 28px rgba(0,0,0,.18);
+      background-image: radial-gradient(ellipse 70% 22% at 55% 0%, rgba(245, 217, 122, .28), transparent 70%); }
+    .hoja::before, .hoja::after { content: ''; position: absolute; pointer-events: none; border-radius: 4mm; }
+    .hoja::before { inset: 7mm; border: .7mm solid var(--oro); }
+    .hoja::after { inset: 8.4mm; border: .3mm solid var(--oro-claro); border-radius: 3mm; }
+    .interior { position: absolute; inset: 13mm 14mm 11mm; display: flex; flex-direction: column; }
+
+    .cab { display: flex; align-items: center; gap: 9mm; margin-bottom: 5mm; }
+    .emblema { position: relative; width: 36mm; height: 26mm; flex: none; }
+    .emblema .n60 { position: absolute; left: 50%; top: -3mm; transform: translateX(-50%); font: 900 27mm/1 'Playfair Display', serif; letter-spacing: -1mm;
+      background: linear-gradient(180deg, #F2D98C, var(--oro) 55%, var(--oro-osc)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .emblema .nom { position: absolute; left: 50%; top: 9mm; transform: translateX(-50%) rotate(-6deg); font: 15mm/1 'Great Vibes', cursive; color: var(--tinta); white-space: nowrap;
+      text-shadow: 0 0 1.2mm #fff, 0 0 1.2mm #fff, 0 0 1.2mm #fff; }
+    .titulos h1 { margin: 0; font: 900 10mm/1.05 'Playfair Display', serif; }
+    .titulos .sub { margin: 1.2mm 0 2.4mm; font-size: 3.6mm; color: var(--suave); }
+    .pildora { display: inline-block; padding: 1.4mm 4.5mm; border-radius: 99mm; background: #1A1A1A; color: #F5D97A; font: 700 3.1mm/1.3 Montserrat, sans-serif; letter-spacing: .25mm; text-transform: uppercase; }
+
+    .tabla { flex: 1; min-height: 0; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: calc(3.5mm * var(--k)); }
+    th { text-align: left; font: 800 calc(2.5mm * var(--k)) Montserrat, sans-serif; letter-spacing: .5mm; text-transform: uppercase; color: var(--oro-osc); padding: 0 2mm calc(1.6mm * var(--k)); border-bottom: .45mm solid var(--oro); }
+    th.dura, td.dura { text-align: right; }
+    td { padding: calc(2.1mm * var(--k)) 2mm; border-bottom: .25mm solid var(--linea); vertical-align: top; }
+    tr.clave td { background: var(--crema); }
+    td.hora { width: 19mm; font: 800 calc(4mm * var(--k))/1.2 'Playfair Display', serif; color: var(--oro-osc); white-space: nowrap; font-variant-numeric: lining-nums; }
+    td.emo { width: 9mm; font-size: calc(4.3mm * var(--k)); line-height: 1.1; text-align: center; padding-left: 0; padding-right: 0; }
+    td.mom b { font-weight: 700; }
+    td.mom .nota { display: block; margin-top: .5mm; font-size: calc(2.9mm * var(--k)); color: var(--suave); line-height: 1.3; }
+    td.dura { width: 14mm; color: var(--suave); font-size: calc(3mm * var(--k)); white-space: nowrap; }
+    .fija { display: inline-block; margin-left: 1.6mm; padding: .2mm 2mm; border-radius: 99mm; background: var(--oro); color: #fff; font: 800 calc(2.1mm * var(--k))/1.5 Montserrat, sans-serif; letter-spacing: .3mm; vertical-align: .3mm; }
+    tr.fin td { border-bottom: 0; color: var(--suave); }
+
+    .pie { display: flex; justify-content: space-between; gap: 4mm; padding-top: 3mm; font-size: 2.7mm; color: var(--suave); }
+    .pie span:nth-child(2) { text-align: center; }
+    .pie span:last-child { text-align: right; }
+
+    @media print {
+      html, body { background: #fff; width: 210mm; height: 297mm; overflow: hidden; }
+      .barra, .aviso { display: none !important; }
+      .hoja { break-after: avoid; page-break-after: avoid; }
+      .marco-hoja { padding: 0; zoom: 1 !important; }
+      .hoja { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="barra" id="barra">
+    <button type="button" id="btnImprimir">🖨 Imprimir / Guardar PDF</button>
+    <label><input type="checkbox" id="conNotas" checked> Incluir notas</label>
+    <a href="./#itinerario">← Volver al panel</a>
+  </div>
+  <div class="aviso" id="aviso" hidden></div>
+  <div class="marco-hoja" id="marcoHoja" hidden>
+    <article class="hoja" id="hoja">
+      <div class="interior">
+        <header class="cab">
+          <div class="emblema" aria-hidden="true"><span class="n60" id="n60">60</span><span class="nom" id="nom">Silvia</span></div>
+          <div class="titulos">
+            <h1>Itinerario de la noche</h1>
+            <p class="sub" id="sub"></p>
+            <span class="pildora" id="pildora"></span>
+          </div>
+        </header>
+        <div class="tabla" id="tabla"></div>
+        <footer class="pie"><span id="pieFoto"></span><span>Momentos clave resaltados</span><span id="pieFecha"></span></footer>
+      </div>
+    </article>
+  </div>
+
+  <script src="../config.js"></script>
+  <script src="../js/comun.js"></script>
+  <script src="../js/datos.js"></script>
+  <script>
+  (async () => {
+    const C = window.CONFIG, A = Datos.admin, $ = s => document.querySelector(s);
+    const esc = S60.esc, MIN = 60000, Z = { timeZone: 'America/Argentina/Buenos_Aires' };
+    const aviso = html => { $('#aviso').innerHTML = html; $('#aviso').hidden = false; $('#barra').style.display = 'none'; };
+
+    // Solo admin
+    let sesion = null;
+    try { sesion = await A.sesion(); } catch (e) { /* abajo */ }
+    if (!sesion) { aviso('🔒 Para imprimir el itinerario primero entrá al <a href="./">panel</a> con tu cuenta, y después tocá «🖨 Itinerario para imprimir».'); return; }
+
+    let iti;
+    try { await S60.cargarEvento(); iti = await A.itinerario(); }
+    catch (e) { aviso('⚠️ ' + esc(e.message || 'No se pudo cargar el itinerario')); return; }
+
+    // Mismo cálculo que el panel: horas en cadena desde el inicio; las de hora fija no se mueven
+    const hhmm = ms => S60.formatoHora(ms);
+    function horaFijaMs(hora, inicio) {
+      const [h, m] = hora.split(':').map(Number), SJ = 3 * 3600e3;
+      let t = Math.floor((inicio - SJ) / 864e5) * 864e5 + SJ + (h * 60 + m) * MIN;
+      if (t < inicio - 3 * 3600e3) t += 864e5;
+      return t;
+    }
+    const inicio = new Date(C.fechaEvento).getTime();
+    let t = inicio;
+    const filas = iti.items.map(it => {
+      const ini = it.hora_fija ? horaFijaMs(it.hora_fija, inicio) : t;
+      t = ini + it.duracion * MIN;
+      return { it, ini };
+    });
+    const fin = t, cfg = iti.config || {};
+    const fIni = inicio + (cfg.fotografa_desde || 0) * MIN, fFin = fIni + (+cfg.fotografa_horas || 0) * 60 * MIN;
+    const dura = m => { const h = Math.floor(m / 60), r = m % 60; return h ? `${h} h${r ? ' ' + r + "'" : ''}` : `${r}'`; };
+    // Momentos clave: los que tienen botón en el panel (animación, video, trivia), hora fija, o son de Silvia
+    const esClave = it => !!(it.boton || it.hora_fija) || /silvia|ramo|vals|brindis|tango|torta|velas/i.test(it.titulo);
+    const limpiarNota = s => String(s || '').replace(/▶\s*/g, '').trim();
+
+    const dia = new Date(C.fechaEvento).toLocaleDateString('es-AR', Object.assign({ weekday: 'short', day: 'numeric', month: 'long' }, Z)).replace('.', '').replace(',', '');
+    $('#n60').textContent = C.edad; $('#nom').textContent = C.homenajeada;
+    $('#sub').textContent = `Los ${C.edad} de ${C.homenajeada} · cronograma general`;
+    $('#pildora').textContent = `${dia} · ${hhmm(inicio)} a ${hhmm(fin)} · ${C.lugar.nombre}${C.lugar.localidad ? ', ' + C.lugar.localidad.split(',')[0] : ''}`;
+    $('#pieFoto').textContent = fFin > fIni ? `📷 Fotógrafa: ${hhmm(fIni)} a ${hhmm(fFin)}` : '';
+    $('#pieFecha').textContent = 'Impreso el ' + new Date().toLocaleDateString('es-AR', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, Z)) + ' ' + hhmm(Date.now());
+    document.title = `Itinerario ${C.homenajeada} ${C.edad}`;
+
+    const LS = 's60_imprimir_notas';
+    try { $('#conNotas').checked = localStorage.getItem(LS) !== 'no'; } catch (e) { /* sin almacenamiento */ }
+
+    function pintar() {
+      const notas = $('#conNotas').checked;
+      $('#tabla').innerHTML = `<table><thead><tr><th>Hora</th><th></th><th>Momento</th><th class="dura">Dura</th></tr></thead><tbody>${filas.map(({ it, ini }) => `
+        <tr class="${esClave(it) ? 'clave' : ''}">
+          <td class="hora">${hhmm(ini)}</td><td class="emo">${esc(it.emoji)}</td>
+          <td class="mom"><b>${esc(it.titulo)}</b>${it.hora_fija ? '<span class="fija">HORA FIJA</span>' : ''}${notas && limpiarNota(it.notas) ? `<span class="nota">${esc(limpiarNota(it.notas))}</span>` : ''}</td>
+          <td class="dura">${it.duracion ? dura(it.duracion) : ''}</td>
+        </tr>`).join('')}
+        <tr class="fin"><td class="hora">${hhmm(fin)}</td><td class="emo">🏁</td><td class="mom"><b>Fin</b></td><td class="dura"></td></tr>
+      </tbody></table>`;
+      ajustar();
+    }
+    // Siempre 1 hoja: si no entra, se achica la letra de la tabla hasta que entre
+    function ajustar() {
+      const caja = $('#tabla'), raiz = document.documentElement;
+      let k = 1.18;
+      raiz.style.setProperty('--k', k);
+      while (caja.scrollHeight > caja.clientHeight + 1 && k > 0.5) { k -= 0.02; raiz.style.setProperty('--k', k.toFixed(2)); }
+    }
+    // En el celular, la hoja se ve achicada para que entre en el ancho (al imprimir vuelve a tamaño real)
+    function zoomPantalla() {
+      const ancho = 210 * 96 / 25.4 + 24;
+      const visible = Math.min(window.innerWidth, (window.visualViewport && window.visualViewport.width) || 9999, screen.width || 9999);
+      $('#marcoHoja').style.zoom = Math.min(1, visible / ancho).toFixed(3);
+    }
+    $('#conNotas').addEventListener('change', e => { try { localStorage.setItem(LS, e.target.checked ? 'si' : 'no'); } catch (x) { /* nada */ } pintar(); });
+    $('#btnImprimir').addEventListener('click', () => window.print());
+    window.addEventListener('resize', zoomPantalla);
+
+    $('#marcoHoja').hidden = false;
+    zoomPantalla();
+    try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 3000))]); } catch (e) { /* sigue */ }
+    pintar();
+    // Al abrir: directo a imprimir / "Guardar como PDF" (en Android Chrome abre esa opción)
+    if (!new URLSearchParams(location.search).has('sinimprimir')) setTimeout(() => window.print(), 400);
+  })();
+  </script>
+</body>
+</html>

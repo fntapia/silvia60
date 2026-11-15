@@ -146,8 +146,12 @@
       if (it.paso === 'nuevo' || it.paso === 'revisando') {
         it.paso = 'revisando';
         estado(it, 'Revisando la foto…', null, .05);
-        await it.preparado;
-        if (!it.imagen) throw new Error('No se pudo leer la foto');
+        try { await it.preparado; } catch (e) { /* abajo se explica */ }
+        if (!it.imagen) {
+          const heic = /\.(heic|heif)$/i.test(it.archivo ? it.archivo.name : '') || /hei[cf]/i.test(it.archivo ? it.archivo.type : '');
+          throw new Error(heic ? 'Este celu no abre fotos HEIC: elegila desde «Galería» como JPG o sacala con la cámara.' : 'No se pudo leer esta foto: probá con otra.');
+        }
+        if (!it.revision) it.revision = { bloqueada: true, error: true, puntajes: { error: 'filtro-fallo' } };   // si el filtro falló, va a revisión (nunca se publica sin revisar)
         estado(it, 'Preparando…', null, .1);
         it.comprimida = (await S60.comprimir(it.imagen, C.fotos.ladoMax, C.fotos.calidad)).blob;
         it.paso = 'subiendo';

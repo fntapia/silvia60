@@ -74,6 +74,10 @@ window.CONFIG = {
 
   // --- Mensaje de WhatsApp para enviar cada invitación. {nombres} y {link} se reemplazan solos ---
   mensajeWhatsApp: '¡Hola {nombres}! 💛 Silvia cumple 60 y nos encantaría que nos acompañen. Acá está su invitación, con todos los datos y para confirmar asistencia: {link}',
+  // Recordatorio para quienes no confirmaron. {fecha} y {limite} salen solos de panel → Evento (si extendés el plazo, se actualiza)
+  mensajeRecordatorio: '¡Hola {nombres}! 💛 Te recordamos que el {fecha} festejamos los 60 de Silvia 🎉 Todavía no recibimos tu confirmación: ¿nos avisás si vienen? Tenés tiempo hasta el {limite}. Es un minuto desde tu invitación 👉 {link} ¡Gracias!',
+  // Nombre que queda registrado cuando confirmás "por ellos" desde el panel ("Confirmado por Franco")
+  nombreAdmin: 'Franco',
 
   // --- Supabase (paso 2 de la guía). Si queda vacío, el sitio funciona en MODO DEMO (solo en este navegador) ---
   supabase: {
