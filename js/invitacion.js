@@ -2,12 +2,26 @@
 // Primero traemos fecha/hora/puntualidad de la base (panel → Evento); si no responde, usa config.js
 // Si tocan el sobre antes de que termine de cargar, lo abrimos apenas esté listo
 document.getElementById('sobre').addEventListener('click', () => { window.__abrirSobre = true; }, { once: true });
+// Alto fijo de cada pantalla: se mide una vez y solo cambia si gira el celular.
+// Así el teclado (que achica la ventana) no mueve ni hace saltar las pantallas.
+(function () {
+  let ancho = 0;
+  function fijar(forzar) {
+    const ed = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (!forzar && (ed || innerWidth === ancho)) return;
+    ancho = innerWidth;
+    document.documentElement.style.setProperty('--alto', Math.max(480, innerHeight) + 'px');
+  }
+  fijar(true);
+  addEventListener('resize', () => fijar(false));
+  addEventListener('orientationchange', () => setTimeout(() => fijar(true), 400));
+})();
 S60.cargarEvento().then(function () {
   const C = window.CONFIG;
   const { $, $$, esc, local, toast } = S60;
 
   const params = new URLSearchParams(location.search);
-  const slug = (params.get('i') || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const slug = (params.get('i') || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
   let grupo = null;          // {slug, nombres, cupo} si el link es válido
   let rsvpActual = null;
 
@@ -56,7 +70,7 @@ S60.cargarEvento().then(function () {
     `<div class="muestra"><i class="${/dorado/i.test(c.nombre) ? 'dorado' : ''}" style="background:${esc(c.hex)}"></i>${esc(c.nombre)}</div>`).join('');
   $('#cierreTexto').textContent = C.cierre.texto;
   $('#cierreFirma').textContent = C.cierre.firma;
-  $('#rsvpLimite').textContent = `Tenés tiempo hasta el ${C.fechaLimiteTexto}. Podés cambiar tu respuesta hasta esa fecha.`;
+  $('#rsvpLimite').textContent = S60.rsvpAbierto() ? `Tenés tiempo hasta el ${C.fechaLimiteTexto}. Podés cambiar tu respuesta hasta esa fecha.` : `El plazo para confirmar fue hasta el ${C.fechaLimiteTexto}.`;
   // Fotos de Silvia (sin fondo) desde config.js
   $$('img[data-imagen]').forEach(img => {
     const im = C.imagenes[img.dataset.imagen];
@@ -121,7 +135,9 @@ S60.cargarEvento().then(function () {
 
   const obs = new IntersectionObserver(entradas => {
     entradas.forEach(e => {
-      if (e.isIntersecting) {
+      // Una pantalla larga (la confirmación) nunca llega al 45 % de sí misma: medimos cuánto ocupa de la ventana
+      const cubre = e.rootBounds ? e.intersectionRect.height / e.rootBounds.height : e.intersectionRatio;
+      if (e.isIntersecting && (cubre >= .45 || e.intersectionRatio >= .45)) {
         const primeraVez = !e.target.classList.contains('visible');
         e.target.classList.add('visible');
         const em = e.target.querySelector('.contenido > .emoji-salto');
@@ -131,16 +147,22 @@ S60.cargarEvento().then(function () {
         marcas.forEach((m, i) => m.classList.toggle('hecho', i <= actual));
       }
     });
-  }, { root: historia, threshold: .45 });
+  }, { root: historia, threshold: [0, .1, .2, .3, .4, .45, .5, .6, .7, .8, .9, 1] });
   laminas.forEach(l => obs.observe(l));
+  // Mientras la confirmación está en pantalla, el desplazamiento es libre (sin imán entre pantallas)
+  new IntersectionObserver(es => es.forEach(e => historia.classList.toggle('sin-iman', e.isIntersecting)), { root: historia, threshold: 0 }).observe($('#rsvp'));
 
   function irA(i) {
     i = Math.max(0, Math.min(laminas.length - 1, i));
     laminas[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   // Toque en zonas vacías: derecha/centro avanza, borde izquierdo retrocede
+  let ultimoTeclado = 0;
+  document.addEventListener('focusout', e => { if (e.target.matches('input, textarea, select')) ultimoTeclado = Date.now(); });
+  const editando = () => document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
   historia.addEventListener('click', e => {
-    if (e.target.closest('a, button, input, select, textarea, label, form, .tarjeta, .celebracion')) return;
+    if (e.target.closest('a, button, input, select, textarea, label, form, .tarjeta, .celebracion, #rsvp')) return;
+    if (editando() || Date.now() - ultimoTeclado < 900) return;   // tocar afuera para cerrar el teclado no cambia de pantalla
     if (getSelection && String(getSelection())) return;
     if (e.clientX < innerWidth * .22) irA(actual - 1); else irA(actual + 1);
   });
@@ -237,9 +259,36 @@ S60.cargarEvento().then(function () {
   $('#btnOtraCancion').addEventListener('click', () => { $('#cancion2').classList.remove('oculto'); $('#btnOtraCancion').classList.add('oculto'); form.tema1.focus(); });
 
   function claveToken() { return 'rsvp_token_' + (grupo ? grupo.slug : 'general'); }
+  const claveBorrador = () => 'rsvp_borrador_' + (grupo ? grupo.slug : 'general');
+  function guardarBorrador() {
+    try {
+      const b = { nombre_contacto: form.nombre_contacto.value, asiste: (form.querySelector('[name=asiste]:checked') || {}).value || '',
+        cantidad, nombres_asistentes: form.nombres_asistentes.value, tildados: integrantes().length ? tildados() : null,
+        tema0: form.tema0.value, artista0: form.artista0.value, tema1: form.tema1.value, artista1: form.artista1.value,
+        mensaje: form.mensaje.value, mostrar_mensaje: form.mostrar_mensaje.checked };
+      local.guardar(claveBorrador(), JSON.stringify(b));
+    } catch (e) {}
+  }
+  function restaurarBorrador() {
+    let b = null;
+    try { b = JSON.parse(local.leer(claveBorrador()) || 'null'); } catch (e) {}
+    if (!b) return;
+    form.nombre_contacto.value = b.nombre_contacto || '';
+    const a = b.asiste && form.querySelector(`[name=asiste][value="${b.asiste}"]`); if (a) a.checked = true;
+    if (b.cantidad) setCantidad(b.cantidad);
+    form.nombres_asistentes.value = b.nombres_asistentes || '';
+    if (b.tildados && integrantes().length) { $$('#listaIntegrantes input').forEach(i => { i.checked = b.tildados.includes(i.value); }); marcarIntegrantes(); }
+    ['tema0', 'artista0', 'tema1', 'artista1', 'mensaje'].forEach(k => { form[k].value = b[k] || ''; });
+    if (b.tema1) { $('#cancion2').classList.remove('oculto'); $('#btnOtraCancion').classList.add('oculto'); }
+    form.mostrar_mensaje.checked = b.mostrar_mensaje !== false;
+    actualizarVisibles();
+  }
+  let tBorrador = null;
+  form.addEventListener('input', () => { clearTimeout(tBorrador); tBorrador = setTimeout(guardarBorrador, 400); });
+  form.addEventListener('change', guardarBorrador);
 
   function llenarForm(r) {
-    if (!r) { setCantidad(grupo ? grupo.cupo : 1); return; }
+    if (!r) { setCantidad(grupo ? grupo.cupo : 1); restaurarBorrador(); return; }
     form.nombre_contacto.value = r.nombre_contacto || '';
     const a = form.querySelector(`[name=asiste][value="${r.asiste}"]`); if (a) a.checked = true;
     setCantidad(r.cantidad || (grupo ? grupo.cupo : 1));
@@ -315,7 +364,12 @@ S60.cargarEvento().then(function () {
     const btn = $('#btnEnviar');
     btn.disabled = true; btn.textContent = 'Enviando…';
     try {
-      const r = await Datos.guardarRsvp(grupo ? grupo.slug : null, local.leer(claveToken()), datos);
+      guardarBorrador();
+      const r = await Promise.race([
+        Datos.guardarRsvp(grupo ? grupo.slug : null, local.leer(claveToken()), datos),
+        new Promise((_, mal) => setTimeout(() => mal(new Error('La conexión está lenta. Tu respuesta no se perdió: tocá «Confirmar» de nuevo.')), 20000))
+      ]);
+      local.borrar ? local.borrar(claveBorrador()) : local.guardar(claveBorrador(), '');
       if (r && r.token) local.guardar(claveToken(), r.token);
       rsvpActual = Object.assign({}, datos, { token: r && r.token });
       $('#celebracionTexto').innerHTML = textoGracias(rsvpActual);
@@ -337,14 +391,31 @@ S60.cargarEvento().then(function () {
 
   /* ---------- Arranque ---------- */
   (async function iniciar() {
-    try {
-      if (slug) grupo = await Datos.obtenerGrupo(slug);
-    } catch (e) { console.warn('No se pudo cargar el grupo', e); }
+    if (slug) {
+      let ok = false;
+      for (let intento = 0; intento < 4 && !ok; intento++) {
+        try {
+          grupo = await Promise.race([Datos.obtenerGrupo(slug), new Promise((_, mal) => setTimeout(() => mal(new Error('lento')), 12000))]);
+          ok = true;
+        } catch (e) { console.warn('No se pudo cargar el grupo', e); await new Promise(r => setTimeout(r, 1500 * (intento + 1))); }
+      }
+      if (!ok) {
+        $('#rsvpCargando').innerHTML = 'No pudimos cargar tu invitación por la conexión. <button class="btn" type="button" id="btnReintentar">Reintentar</button>';
+        $('#btnReintentar').addEventListener('click', () => location.reload());
+        return;
+      }
+      if (!grupo) {   // link de familia que no existe (WhatsApp a veces lo corta o se copió mal)
+        $('#rsvpCargando').innerHTML = '<p>No encontramos esta invitación personal 🤔<br><small>A veces WhatsApp corta el link: pedile a quien te invitó que te lo reenvíe.</small></p>' +
+          '<button class="btn" type="button" id="btnConfirmarIgual">Confirmar igual con mi nombre</button>';
+        await new Promise(ok => $('#btnConfirmarIgual').addEventListener('click', ok, { once: true }));
+      }
+    }
     personalizar();
-    try {
-      const token = local.leer(claveToken());
-      rsvpActual = (grupo || token) ? await Datos.obtenerRsvp({ slug: grupo ? grupo.slug : null, token }) : null;
-    } catch (e) { console.warn('No se pudo cargar la confirmación', e); }
+    const token = local.leer(claveToken());
+    for (let intento = 0; intento < 2 && (grupo || token); intento++) {
+      try { rsvpActual = await Datos.obtenerRsvp({ slug: grupo ? grupo.slug : null, token }); break; }
+      catch (e) { console.warn('No se pudo cargar la confirmación', e); await new Promise(r => setTimeout(r, 1500)); }
+    }
     if (rsvpActual) mostrarResumen(rsvpActual);
     else { llenarForm(null); mostrarForm(); }
   })();
