@@ -13,7 +13,7 @@ body { background: #fff; }
 }
 .lamina {
   position: relative; overflow: hidden;
-  min-height: 100vh; min-height: 100svh;
+  min-height: 100vh; min-height: 100svh; min-height: var(--alto, 100svh);
   scroll-snap-align: start;
   display: flex; align-items: center; justify-content: center;
   padding: 64px 20px 48px;
@@ -272,3 +272,6 @@ body.abierta .globo { animation: cae-globo 1.3s cubic-bezier(.3, 1.45, .5, 1) .3
 @media (prefers-reduced-motion: reduce) {
   .portada-foto img, .nombre span, .frase, .globo, .portada-fecha { opacity: 1 !important; transform: none !important; }
 }
+
+/* Confirmación: desplazamiento libre, sin imán entre pantallas (el teclado no tira para arriba) */
+.historia.sin-iman { scroll-snap-type: none; }
